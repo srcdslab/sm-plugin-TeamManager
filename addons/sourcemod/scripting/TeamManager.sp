@@ -28,7 +28,7 @@ public Plugin myinfo =
 {
 	name = "TeamManager",
 	author = "BotoX + maxime1907",
-	description = "",
+	description = "Adds a warmup round, makes every human a ct and every zombie a t",
 	version = "2.0",
 	url = "https://github.com/CSSZombieEscape/sm-plugins/tree/master/TeamManager"
 };
