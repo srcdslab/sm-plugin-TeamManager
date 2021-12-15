@@ -201,16 +201,18 @@ public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 		return Plugin_Handled;
 	}
 
-	if (NewTeam == CS_TEAM_T || NewTeam == CS_TEAM_NONE)
-		NewTeam = CS_TEAM_CT;
+	if(!g_bZombieSpawned)
+	{
+		if(NewTeam == CS_TEAM_T || NewTeam == CS_TEAM_NONE)
+			NewTeam = CS_TEAM_CT;
+	}
+	else if(NewTeam == CS_TEAM_CT || NewTeam == CS_TEAM_NONE)
+		NewTeam = CS_TEAM_T;
 
 	if(NewTeam == CurrentTeam)
 		return Plugin_Handled;
 
 	ChangeClientTeam(client, NewTeam);
-	
-	if (g_bZombieReloaded && g_bZombieSpawned && NewTeam == CS_TEAM_T)
-		FakeClientCommand(client, "say /zspawn");
 
 	return Plugin_Handled;
 }
