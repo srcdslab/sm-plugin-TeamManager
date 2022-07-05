@@ -22,7 +22,9 @@ bool g_bRoundEnded = false;
 bool g_bZombieSpawned = false;
 int g_TeamChangeQueue[MAXPLAYERS + 1] = { -1, ... };
 
+#if defined _zr_included
 bool g_bZombieReloaded = false;
+#endif
 
 public Plugin myinfo =
 {
