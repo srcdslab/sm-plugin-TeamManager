@@ -31,7 +31,7 @@ public Plugin myinfo =
 	name = "TeamManager",
 	author = "BotoX + maxime1907",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.0",
+	version = "2.0.1",
 	url = "https://github.com/CSSZombieEscape/sm-plugins/tree/master/TeamManager"
 };
 
@@ -162,7 +162,7 @@ public void OnClientDisconnect(int client)
 
 public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 {
-	if (client < 1 || client >= MaxClients || !IsClientInGame(client) || !g_CVar_sm_warmupteam.BoolValue)
+	if (client < 1 || client > MaxClients || !IsClientInGame(client) || !g_CVar_sm_warmupteam.BoolValue)
 		return Plugin_Continue;
 
 	if(StrEqual(command, "joingame", false))
