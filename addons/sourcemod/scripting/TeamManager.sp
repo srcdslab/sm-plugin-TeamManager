@@ -29,9 +29,9 @@ bool g_bZombieReloaded = false;
 public Plugin myinfo =
 {
 	name = "TeamManager",
-	author = "BotoX + maxime1907",
+	author = "BotoX + maxime1907 + Sparky",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.0.1",
+	version = "2.0.2",
 	url = "https://github.com/CSSZombieEscape/sm-plugins/tree/master/TeamManager"
 };
 
@@ -210,10 +210,13 @@ public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 	}
 	else if(NewTeam == CS_TEAM_CT || NewTeam == CS_TEAM_NONE)
 		NewTeam = CS_TEAM_T;
+		
+	else if(g_bZombieSpawned && NewTeam == CS_TEAM_SPECTATOR && IsPlayerAlive(client) && IsClientInGame(client))
+		return Plugin_Handled;
 
 	if(NewTeam == CurrentTeam)
 		return Plugin_Handled;
-
+	
 	ChangeClientTeam(client, NewTeam);
 
 	return Plugin_Handled;
