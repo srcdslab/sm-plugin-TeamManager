@@ -211,7 +211,7 @@ public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 	else if(NewTeam == CS_TEAM_CT || NewTeam == CS_TEAM_NONE)
 		NewTeam = CS_TEAM_T;
 		
-	else if(g_bZombieSpawned && NewTeam == CS_TEAM_SPECTATOR && IsPlayerAlive(client) && IsClientInGame(client))
+	else if(g_bZombieSpawned && NewTeam == CS_TEAM_SPECTATOR)
 		return Plugin_Handled;
 
 	if(NewTeam == CurrentTeam)
