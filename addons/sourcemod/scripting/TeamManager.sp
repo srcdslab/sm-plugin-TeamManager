@@ -22,16 +22,14 @@ bool g_bRoundEnded = false;
 bool g_bZombieSpawned = false;
 int g_TeamChangeQueue[MAXPLAYERS + 1] = { -1, ... };
 
-#if defined _zr_included
 bool g_bZombieReloaded = false;
-#endif
 
 public Plugin myinfo =
 {
 	name = "TeamManager",
 	author = "BotoX + maxime1907 + Sparky",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.0.2",
+	version = "2.0.3",
 	url = "https://github.com/CSSZombieEscape/sm-plugins/tree/master/TeamManager"
 };
 
@@ -59,9 +57,7 @@ public void OnPluginStart()
 	g_CVar_sm_warmup = CreateConVar("sm_warmup", "1", "Enables the warmup system", 0, true, 0.0, true, 1.0);
 	g_CVar_sm_warmup.AddChangeHook(WarmupSystem);
 
-#if defined _zr_included
 	g_bZombieReloaded = LibraryExists("zombiereloaded");
-#endif
 
 	g_hWarmupEndFwd = CreateGlobalForward("TeamManager_WarmupEnd", ET_Ignore);
 
@@ -70,18 +66,14 @@ public void OnPluginStart()
 
 public void OnLibraryAdded(const char[] szName)
 {
-#if defined _zr_included
 	if (StrEqual(szName, "zombiereloaded"))
 		g_bZombieReloaded = true;
-#endif
 }
 
 public void OnLibraryRemoved(const char[] szName)
 {
-#if defined _zr_included
 	if (StrEqual(szName, "zombiereloaded"))
 		g_bZombieReloaded = false;
-#endif
 }
 
 public void WarmupSystem(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -162,7 +154,7 @@ public void OnClientDisconnect(int client)
 
 public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 {
-	if (client < 1 || client > MaxClients || !IsClientInGame(client) || !g_CVar_sm_warmupteam.BoolValue)
+	if (client < 1 || client > MaxClients || !IsClientInGame(client) || !g_CVar_sm_warmupteam.BoolValue || !g_bZombieReloaded)
 		return Plugin_Continue;
 
 	if(StrEqual(command, "joingame", false))
@@ -210,7 +202,7 @@ public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 	}
 	else if(NewTeam == CS_TEAM_CT || NewTeam == CS_TEAM_NONE)
 		NewTeam = CS_TEAM_T;
-		
+
 	else if(g_bZombieSpawned && NewTeam == CS_TEAM_SPECTATOR)
 		return Plugin_Handled;
 
@@ -273,6 +265,7 @@ public Action CS_OnTerminateRound(float &delay, CSRoundEndReason &reason)
 	return Plugin_Continue;
 }
 
+#if defined _zr_included
 public Action ZR_OnClientInfect(int &client, int &attacker, bool &motherInfect, bool &respawnOverride, bool &respawn)
 {
 	if (motherInfect)
@@ -280,6 +273,7 @@ public Action ZR_OnClientInfect(int &client, int &attacker, bool &motherInfect, 
 
 	return Plugin_Continue;
 }
+#endif
 
 public int Native_InWarmup(Handle hPlugin, int numParams)
 {
