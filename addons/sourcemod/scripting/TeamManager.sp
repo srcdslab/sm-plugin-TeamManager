@@ -140,7 +140,7 @@ public Action OnWarmupTimer(Handle timer)
 		return Plugin_Stop;
 	}
 
-	PrintCenterTextAll("Warmup: %ds", g_CVar_sm_warmuptime.IntValue - g_iWarmup);
+	PrintCenterTextAll("Warmup: %d", g_CVar_sm_warmuptime.IntValue - g_iWarmup);
 	g_iWarmup++;
 
 	return Plugin_Continue;
