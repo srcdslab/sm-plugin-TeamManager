@@ -2,7 +2,9 @@
 #include <cstrike>
 #include <sdktools>
 
+#undef REQUIRE_PLUGIN
 #tryinclude <zombiereloaded>
+#define REQUIRE_PLUGIN
 
 #pragma semicolon 1
 #pragma newdecls required
@@ -20,14 +22,14 @@ ConVar g_CVar_sm_warmup;
 
 bool g_bRoundEnded = false;
 bool g_bZombieSpawned = false;
-int g_TeamChangeQueue[MAXPLAYERS + 1] = { -1, ... };
-
 bool g_bZombieReloaded = false;
+
+int g_TeamChangeQueue[MAXPLAYERS + 1] = { -1, ... };
 
 public Plugin myinfo =
 {
 	name = "TeamManager",
-	author = "BotoX + maxime1907 + Sparky",
+	author = "BotoX + maxime1907",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
 	version = "2.0.3",
 	url = "https://github.com/CSSZombieEscape/sm-plugins/tree/master/TeamManager"
@@ -35,6 +37,9 @@ public Plugin myinfo =
 
 public APLRes AskPluginLoad2(Handle hThis, bool bLate, char[] err, int iErrLen)
 {
+	g_hWarmupEndFwd = CreateGlobalForward("TeamManager_WarmupEnd", ET_Ignore);
+
+	CreateNative("TeamManager_HasWarmup", Native_HasWarmup);
 	CreateNative("TeamManager_InWarmup", Native_InWarmup);
 
 	RegPluginLibrary("TeamManager");
@@ -57,11 +62,12 @@ public void OnPluginStart()
 	g_CVar_sm_warmup = CreateConVar("sm_warmup", "1", "Enables the warmup system", 0, true, 0.0, true, 1.0);
 	g_CVar_sm_warmup.AddChangeHook(WarmupSystem);
 
-	g_bZombieReloaded = LibraryExists("zombiereloaded");
-
-	g_hWarmupEndFwd = CreateGlobalForward("TeamManager_WarmupEnd", ET_Ignore);
-
 	AutoExecConfig(true);
+}
+
+public void OnAllPluginsLoaded()
+{
+	g_bZombieReloaded = LibraryExists("zombiereloaded");
 }
 
 public void OnLibraryAdded(const char[] szName)
@@ -154,7 +160,7 @@ public void OnClientDisconnect(int client)
 
 public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 {
-	if (client < 1 || client > MaxClients || !IsClientInGame(client) || !g_CVar_sm_warmupteam.BoolValue || !g_bZombieReloaded)
+	if (client < 1 || client > MaxClients || !IsClientInGame(client) || !g_CVar_sm_warmupteam.BoolValue)
 		return Plugin_Continue;
 
 	if(StrEqual(command, "joingame", false))
@@ -195,20 +201,20 @@ public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 		return Plugin_Handled;
 	}
 
-	if(!g_bZombieSpawned)
+	if(g_bZombieReloaded)
 	{
-		if(NewTeam == CS_TEAM_T || NewTeam == CS_TEAM_NONE)
+		if(!g_bZombieSpawned && NewTeam == CS_TEAM_T || NewTeam == CS_TEAM_NONE)
 			NewTeam = CS_TEAM_CT;
+
+		else if(g_bZombieReloaded && g_bZombieSpawned && NewTeam == CS_TEAM_SPECTATOR)
+			return Plugin_Handled;
 	}
 	else if(NewTeam == CS_TEAM_CT || NewTeam == CS_TEAM_NONE)
 		NewTeam = CS_TEAM_T;
 
-	else if(g_bZombieSpawned && NewTeam == CS_TEAM_SPECTATOR)
-		return Plugin_Handled;
-
 	if(NewTeam == CurrentTeam)
 		return Plugin_Handled;
-	
+
 	ChangeClientTeam(client, NewTeam);
 
 	return Plugin_Handled;
@@ -274,6 +280,11 @@ public Action ZR_OnClientInfect(int &client, int &attacker, bool &motherInfect, 
 	return Plugin_Continue;
 }
 #endif
+
+public int Native_HasWarmup(Handle hPlugin, int numParams)
+{
+	return g_CVar_sm_warmup.BoolValue;
+}
 
 public int Native_InWarmup(Handle hPlugin, int numParams)
 {

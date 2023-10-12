@@ -11,6 +11,13 @@
 forward void TeamManager_WarmupEnd();
 
 /**
+ * Returns if warmup is enabled
+ *
+ * @return				bool sm_warmup
+ */
+native bool TeamManager_HasWarmup();
+
+/**
  * Returns the status of warmup
  *
  * @return				bool inwarmup
@@ -31,6 +38,7 @@ public SharedPlugin __pl_TeamManager =
 #if !defined REQUIRE_PLUGIN
 public void __pl_TeamManager_SetNTVOptional()
 {
+	MarkNativeAsOptional("TeamManager_HasWarmup");
 	MarkNativeAsOptional("TeamManager_InWarmup");
 }
 #endif
