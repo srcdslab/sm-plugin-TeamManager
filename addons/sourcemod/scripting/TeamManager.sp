@@ -125,7 +125,7 @@ public void InitWarmup()
 	}
 
 	// Prevent the warmup timer from being longer than the maximum warmup time.
-	if (g_cvWarmuptime.IntValue > g_cvWarmupMaxTime.IntValue)
+	if (g_cvWarmupMaxTime.IntValue >= 0 && g_cvWarmuptime.IntValue > g_cvWarmupMaxTime.IntValue)
 		g_cvWarmuptime.IntValue = g_cvWarmupMaxTime.IntValue;
 
 	// Prevent the dynamic warmup timer from being shorter than the default warmup time.
@@ -133,7 +133,7 @@ public void InitWarmup()
 		g_iDynamicWarmupTime = g_cvWarmuptime.IntValue;
 
 	// Prevent surpassing the maximum warm-up time
-	if (g_iDynamicWarmupTime > g_cvWarmupMaxTime.IntValue)
+	if (g_cvWarmupMaxTime.IntValue >= 0 && g_iDynamicWarmupTime > g_cvWarmupMaxTime.IntValue)
 		g_iDynamicWarmupTime = g_cvWarmupMaxTime.IntValue;
 
 	if (g_cvWarmup.BoolValue && (g_cvWarmuptime.IntValue > 0 || g_cvPlayersRatio.FloatValue > 0.0 || g_cvDynamic.IntValue > 0))
