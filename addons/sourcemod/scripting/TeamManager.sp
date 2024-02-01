@@ -109,7 +109,7 @@ public void InitWarmup()
 			g_cvDynamic.IntValue = 0; // Invalid map size, disable dynamic warmup.
 		else
 		{
-			// Ensure the dynamic ratio is between 1 and 100.
+			// Ensure the dynamic ratio is between 1 and map size.
 			if (g_cvDynamicRatio.IntValue < 1)
 				g_cvDynamicRatio.IntValue = 1;
 		
