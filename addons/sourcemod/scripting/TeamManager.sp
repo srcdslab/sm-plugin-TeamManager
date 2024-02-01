@@ -58,15 +58,15 @@ public void OnPluginStart()
 
 	/* Global */
 	g_cvWarmup = CreateConVar("sm_warmup", "1", "Enables the warmup system", 0, true, 0.0, true, 1.0);
-	g_cvWarmuptime = CreateConVar("sm_warmuptime", "10", "Warmup timer.", 0, true, 0.0, true, 60.0);
+	g_cvWarmuptime = CreateConVar("sm_warmuptime", "10", "Warmup timer.", 0, true, 0.0);
 	g_cvWarmupMaxTime = CreateConVar("sm_warmuptime_max", "180", "Maximum warmup timer.");
 	g_cvForceTeam = CreateConVar("sm_warmupteam", "1", "Force the player to join the counterterrorist team", 0, true, 0.0, true, 1.0);
 	g_cvPlayersRatio = CreateConVar("sm_warmupratio", "0.60", "Ratio of connected players that need to be in game to start warmup timer.", 0, true, 0.0, true, 1.0);
 
 	/* Dynamic based on map size*/
 	g_cvDynamic = CreateConVar("sm_warmuptime_dynamic", "0", "Dynamic warmup timer based on map size. [0 Disabled | 1 = Enabled]", 0, true, 0.0, true, 1.0);
-	g_cvDynamicRatio = CreateConVar("sm_warmup_dynamic_ratio", "20", "Ratio per Megabyte (MiB) based on map size.", 0, true, 0.0, true, 100.0);
-	g_cvDynamicTime = CreateConVar("sm_warmuptime_dynamic_ratio_time", "6", "Additional time in seconds to add to the dynamic warmup timer. [Based on the dynamic ratio]");
+	g_cvDynamicRatio = CreateConVar("sm_warmup_dynamic_ratio", "50", "Ratio per Megabyte (MiB) based on map size.", 0, true, 0.0, true, 100.0);
+	g_cvDynamicTime = CreateConVar("sm_warmuptime_dynamic_ratio_time", "5", "Additional time in seconds to add to the dynamic warmup timer. [Based on the dynamic ratio]");
 
 	g_cvWarmup.AddChangeHook(WarmupSystem);
 	AutoExecConfig(true);
