@@ -1,6 +1,7 @@
 #include <sourcemod>
 #include <cstrike>
 #include <sdktools>
+#include <utilshelper>
 
 #undef REQUIRE_PLUGIN
 #tryinclude <zombiereloaded>
@@ -11,28 +12,27 @@
 
 #define MIN_PLAYERS 2
 
-Handle g_hWarmupEndFwd;
+Handle g_hWarmupEndFwd = INVALID_HANDLE;
 
-int g_iWarmup = 0;
+ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvForceTeam, g_cvPlayersRatio;
+ConVar g_cvDynamic, g_cvDynamicRatio, g_cvDynamicTime;
+
 bool g_bWarmup = false;
-ConVar g_CVar_sm_warmuptime;
-ConVar g_CVar_sm_warmupratio;
-ConVar g_CVar_sm_warmupteam;
-ConVar g_CVar_sm_warmup;
-
 bool g_bRoundEnded = false;
 bool g_bZombieSpawned = false;
 bool g_bZombieReloaded = false;
 
+int g_iWarmup = 0;
+int g_iDynamicWarmupTime = 0;
 int g_TeamChangeQueue[MAXPLAYERS + 1] = { -1, ... };
 
 public Plugin myinfo =
 {
 	name = "TeamManager",
-	author = "BotoX + maxime1907",
+	author = "BotoX + maxime1907, .Rushaway",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.0.3",
-	url = "https://github.com/CSSZombieEscape/sm-plugins/tree/master/TeamManager"
+	version = "2.1.0",
+	url = "https://github.com/srcdslab/sm-plugin-TeamManager"
 };
 
 public APLRes AskPluginLoad2(Handle hThis, bool bLate, char[] err, int iErrLen)
@@ -56,12 +56,19 @@ public void OnPluginStart()
 	HookEvent("round_start", OnRoundStart, EventHookMode_Pre);
 	HookEvent("round_end", OnRoundEnd, EventHookMode_PostNoCopy);
 
-	g_CVar_sm_warmuptime = CreateConVar("sm_warmuptime", "10", "Warmup timer.", 0, true, 0.0, true, 60.0);
-	g_CVar_sm_warmupratio = CreateConVar("sm_warmupratio", "0.60", "Ratio of connected players that need to be in game to start warmup timer.", 0, true, 0.0, true, 1.0);
-	g_CVar_sm_warmupteam = CreateConVar("sm_warmupteam", "1", "Force the player to join the counterterrorist team", 0, true, 0.0, true, 1.0);
-	g_CVar_sm_warmup = CreateConVar("sm_warmup", "1", "Enables the warmup system", 0, true, 0.0, true, 1.0);
-	g_CVar_sm_warmup.AddChangeHook(WarmupSystem);
+	/* Global */
+	g_cvWarmup = CreateConVar("sm_warmup", "1", "Enables the warmup system", 0, true, 0.0, true, 1.0);
+	g_cvWarmuptime = CreateConVar("sm_warmuptime", "10", "Warmup timer.", 0, true, 0.0, true, 60.0);
+	g_cvWarmupMaxTime = CreateConVar("sm_warmuptime_max", "180", "Maximum warmup timer.");
+	g_cvForceTeam = CreateConVar("sm_warmupteam", "1", "Force the player to join the counterterrorist team", 0, true, 0.0, true, 1.0);
+	g_cvPlayersRatio = CreateConVar("sm_warmupratio", "0.60", "Ratio of connected players that need to be in game to start warmup timer.", 0, true, 0.0, true, 1.0);
 
+	/* Dynamic based on map size*/
+	g_cvDynamic = CreateConVar("sm_warmuptime_dynamic", "0", "Dynamic warmup timer based on map size. [0 Disabled | 1 = Enabled]", 0, true, 0.0, true, 1.0);
+	g_cvDynamicRatio = CreateConVar("sm_warmup_dynamic_ratio", "20", "Ratio per Megabyte (MiB) based on map size.", 0, true, 0.0, true, 100.0);
+	g_cvDynamicTime = CreateConVar("sm_warmuptime_dynamic_ratio_time", "6", "Additional time in seconds to add to the dynamic warmup timer. [Based on the dynamic ratio]");
+
+	g_cvWarmup.AddChangeHook(WarmupSystem);
 	AutoExecConfig(true);
 }
 
@@ -94,7 +101,42 @@ public void InitWarmup()
 	g_bRoundEnded = false;
 	g_bZombieSpawned = false;
 
-	if(g_CVar_sm_warmuptime.IntValue > 0 || g_CVar_sm_warmupratio.FloatValue > 0.0)
+	if (g_cvDynamic.IntValue > 0)
+	{
+		// Convert the map size fromn bytes to megabytes.
+		int iMapSize = (GetCurrentMapSize() / 1048576);
+		if (iMapSize < 1)
+			g_cvDynamic.IntValue = 0; // Invalid map size, disable dynamic warmup.
+		else
+		{
+			// Ensure the dynamic ratio is between 1 and 100.
+			if (g_cvDynamicRatio.IntValue < 1)
+				g_cvDynamicRatio.IntValue = 1;
+		
+			if (g_cvDynamicRatio.IntValue > 100)
+				g_cvDynamicRatio.IntValue = 100;
+
+			// Ratio of additional warmup time per Megabyte (MiB) based on map size.
+			int iDynamicTime = iMapSize / g_cvDynamicRatio.IntValue;
+
+			// Additional time in seconds to add to the dynamic warmup timer. [Based on the dynamic ratio]
+			g_iDynamicWarmupTime = iDynamicTime * g_cvDynamicTime.IntValue;
+		}
+	}
+
+	// Prevent the warmup timer from being longer than the maximum warmup time.
+	if (g_cvWarmuptime.IntValue > g_cvWarmupMaxTime.IntValue)
+		g_cvWarmuptime.IntValue = g_cvWarmupMaxTime.IntValue;
+
+	// Prevent the dynamic warmup timer from being shorter than the default warmup time.
+	if (g_iDynamicWarmupTime < g_cvWarmuptime.IntValue)
+		g_iDynamicWarmupTime = g_cvWarmuptime.IntValue;
+
+	// Prevent surpassing the maximum warm-up time
+	if (g_iDynamicWarmupTime > g_cvWarmupMaxTime.IntValue)
+		g_iDynamicWarmupTime = g_cvWarmupMaxTime.IntValue;
+
+	if (g_cvWarmup.BoolValue && (g_cvWarmuptime.IntValue > 0 || g_cvPlayersRatio.FloatValue > 0.0 || g_cvDynamic.IntValue > 0))
 	{
 		g_bWarmup = true;
 		CreateTimer(1.0, OnWarmupTimer, 0, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
@@ -108,14 +150,15 @@ public void OnMapStart()
 
 public Action OnWarmupTimer(Handle timer)
 {
-	if (!g_CVar_sm_warmup.BoolValue)
+	if (!g_bWarmup)
 		return Plugin_Stop;
 
-	if(g_CVar_sm_warmupratio.FloatValue > 0.0)
+
+	if (g_cvPlayersRatio.FloatValue > 0.0)
 	{
 		int ClientsConnected = GetClientCount(false);
 		int ClientsInGame = GetClientCount(true);
-		int ClientsNeeded = RoundToCeil(float(ClientsConnected) * g_CVar_sm_warmupratio.FloatValue);
+		int ClientsNeeded = RoundToCeil(float(ClientsConnected) * g_cvPlayersRatio.FloatValue);
 		ClientsNeeded = ClientsNeeded > MIN_PLAYERS ? ClientsNeeded : MIN_PLAYERS;
 
 		if(ClientsInGame < ClientsNeeded)
@@ -126,24 +169,35 @@ public Action OnWarmupTimer(Handle timer)
 		}
 	}
 
-	if(g_iWarmup >= g_CVar_sm_warmuptime.IntValue)
+	int iTime = 0;
+	if (g_cvDynamic.IntValue != 0)
+		iTime = g_iDynamicWarmupTime;
+	else
+		iTime = g_cvWarmuptime.IntValue;
+
+	if (g_iWarmup >= iTime)
 	{
-		g_iWarmup = 0;
-		g_bWarmup = false;
-		float fDelay = 3.0;
-		CS_TerminateRound(fDelay, CSRoundEnd_GameStart, false);
-		SetTeamScore(CS_TEAM_CT, 0);
-		CS_SetTeamScore(CS_TEAM_CT, 0);
-		SetTeamScore(CS_TEAM_T, 0);
-		CS_SetTeamScore(CS_TEAM_T, 0);
-		CreateTimer(fDelay, Timer_FireForward, _, TIMER_FLAG_NO_MAPCHANGE);
+		EndWarmUp();
 		return Plugin_Stop;
 	}
 
-	PrintCenterTextAll("Warmup: %d", g_CVar_sm_warmuptime.IntValue - g_iWarmup);
+	PrintCenterTextAll("Warmup: %d", iTime - g_iWarmup);
 	g_iWarmup++;
 
 	return Plugin_Continue;
+}
+
+stock void EndWarmUp()
+{
+	g_iWarmup = 0;
+	g_bWarmup = false;
+	float fDelay = 3.0;
+	CS_TerminateRound(fDelay, CSRoundEnd_GameStart, false);
+	SetTeamScore(CS_TEAM_CT, 0);
+	CS_SetTeamScore(CS_TEAM_CT, 0);
+	SetTeamScore(CS_TEAM_T, 0);
+	CS_SetTeamScore(CS_TEAM_T, 0);
+	CreateTimer(fDelay, Timer_FireForward, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public Action Timer_FireForward(Handle hThis)
@@ -160,7 +214,7 @@ public void OnClientDisconnect(int client)
 
 public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 {
-	if (client < 1 || client > MaxClients || !IsClientInGame(client) || !g_CVar_sm_warmupteam.BoolValue)
+	if (client < 1 || client > MaxClients || !IsClientInGame(client) || !g_cvForceTeam.BoolValue)
 		return Plugin_Continue;
 
 	if(StrEqual(command, "joingame", false))
@@ -225,7 +279,7 @@ public void OnRoundStart(Event event, const char[] name, bool dontBroadcast)
 	g_bRoundEnded = false;
 	g_bZombieSpawned = false;
 
-	if (!g_CVar_sm_warmupteam.BoolValue)
+	if (!g_cvForceTeam.BoolValue)
 		return;
 
 	for(int client = 1; client <= MaxClients; client++)
@@ -265,7 +319,7 @@ public void OnRoundEnd(Event event, const char[] name, bool dontBroadcast)
 
 public Action CS_OnTerminateRound(float &delay, CSRoundEndReason &reason)
 {
-	if(g_bWarmup && g_CVar_sm_warmup.BoolValue)
+	if(g_bWarmup && g_cvWarmup.BoolValue)
 		return Plugin_Handled;
 
 	return Plugin_Continue;
@@ -283,7 +337,7 @@ public Action ZR_OnClientInfect(int &client, int &attacker, bool &motherInfect, 
 
 public int Native_HasWarmup(Handle hPlugin, int numParams)
 {
-	return g_CVar_sm_warmup.BoolValue;
+	return g_cvWarmup.BoolValue;
 }
 
 public int Native_InWarmup(Handle hPlugin, int numParams)
