@@ -65,7 +65,7 @@ public void OnPluginStart()
 
 	/* Dynamic based on map size*/
 	g_cvDynamic = CreateConVar("sm_warmuptime_dynamic", "0", "Dynamic warmup timer based on map size. [0 Disabled | 1 = Enabled]", 0, true, 0.0, true, 1.0);
-	g_cvDynamicRatio = CreateConVar("sm_warmup_dynamic_ratio", "50", "Ratio per Megabyte (MiB) based on map size.", 0, true, 0.0, true, 100.0);
+	g_cvDynamicRatio = CreateConVar("sm_warmup_dynamic_ratio", "50", "Ratio per Megabyte (MiB) based on map size.", 0, true, 1.0);
 	g_cvDynamicTime = CreateConVar("sm_warmuptime_dynamic_ratio_time", "5", "Additional time in seconds to add to the dynamic warmup timer. [Based on the dynamic ratio]");
 
 	g_cvWarmup.AddChangeHook(WarmupSystem);
@@ -113,8 +113,8 @@ public void InitWarmup()
 			if (g_cvDynamicRatio.IntValue < 1)
 				g_cvDynamicRatio.IntValue = 1;
 		
-			if (g_cvDynamicRatio.IntValue > 100)
-				g_cvDynamicRatio.IntValue = 100;
+			if (g_cvDynamicRatio.IntValue > iMapSize)
+				g_cvDynamicRatio.IntValue = iMapSize;
 
 			// Ratio of additional warmup time per Megabyte (MiB) based on map size.
 			int iDynamicTime = iMapSize / g_cvDynamicRatio.IntValue;
