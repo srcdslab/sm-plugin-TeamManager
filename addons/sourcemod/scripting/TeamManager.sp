@@ -169,11 +169,7 @@ public Action OnWarmupTimer(Handle timer)
 		}
 	}
 
-	int iTime = 0;
-	if (g_cvDynamic.IntValue != 0)
-		iTime = g_iDynamicWarmupTime;
-	else
-		iTime = g_cvWarmuptime.IntValue;
+	int iTime = (g_cvDynamic.IntValue != 0) ? g_iDynamicWarmupTime : g_cvWarmuptime.IntValue;
 
 	if (g_iWarmup >= iTime)
 	{
