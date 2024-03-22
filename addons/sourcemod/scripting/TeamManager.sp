@@ -2,6 +2,7 @@
 #include <cstrike>
 #include <sdktools>
 #include <utilshelper>
+#include <multicolors>
 
 #undef REQUIRE_PLUGIN
 #tryinclude <zombiereloaded>
@@ -14,12 +15,13 @@
 
 Handle g_hWarmupEndFwd = INVALID_HANDLE;
 
-ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvForceTeam, g_cvPlayersRatio;
+ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvForceTeam, g_cvPlayersRatio, g_cvSlayOnWarmupEnd;
 ConVar g_cvDynamic, g_cvDynamicRatio, g_cvDynamicTime;
 
 bool g_bWarmup = false;
 bool g_bRoundEnded = false;
 bool g_bZombieSpawned = false;
+bool g_bBlockRespawn = false;
 bool g_bZombieReloaded = false;
 
 int g_iWarmup = 0;
@@ -31,7 +33,7 @@ public Plugin myinfo =
 	name = "TeamManager",
 	author = "BotoX + maxime1907, .Rushaway",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.1.0",
+	version = "2.2.0",
 	url = "https://github.com/srcdslab/sm-plugin-TeamManager"
 };
 
@@ -62,6 +64,7 @@ public void OnPluginStart()
 	g_cvWarmupMaxTime = CreateConVar("sm_warmuptime_max", "-1", "Maximum warmup timer [-1 = Disabled]");
 	g_cvForceTeam = CreateConVar("sm_warmupteam", "1", "Force the player to join the counterterrorist team", 0, true, 0.0, true, 1.0);
 	g_cvPlayersRatio = CreateConVar("sm_warmupratio", "0.60", "Ratio of connected players that need to be in game to start warmup timer.", 0, true, 0.0, true, 1.0);
+	g_cvSlayOnWarmupEnd = CreateConVar("sm_warmup_slay", "0", "Slay all players at the end of the warmup round.", 0, true, 0.0, true, 1.0);
 
 	/* Dynamic based on map size*/
 	g_cvDynamic = CreateConVar("sm_warmuptime_dynamic", "0", "Dynamic warmup timer based on map size. [0 Disabled | 1 = Enabled]", 0, true, 0.0, true, 1.0);
@@ -99,6 +102,7 @@ public void InitWarmup()
 	g_iWarmup = 0;
 	g_bWarmup = false;
 	g_bRoundEnded = false;
+	g_bBlockRespawn = false;
 	g_bZombieSpawned = false;
 
 	if (g_cvDynamic.IntValue > 0)
@@ -188,6 +192,18 @@ stock void EndWarmUp()
 	g_iWarmup = 0;
 	g_bWarmup = false;
 	float fDelay = 3.0;
+
+	if (g_cvSlayOnWarmupEnd.BoolValue)
+	{
+		g_bBlockRespawn = true;
+
+		for (int i = 1; i <= MaxClients; i++)
+		{
+			if (IsClientInGame(i) && IsPlayerAlive(i))
+				ForcePlayerSuicide(i);
+		}
+	}
+
 	CS_TerminateRound(fDelay, CSRoundEnd_GameStart, false);
 	SetTeamScore(CS_TEAM_CT, 0);
 	CS_SetTeamScore(CS_TEAM_CT, 0);
@@ -326,6 +342,17 @@ public Action ZR_OnClientInfect(int &client, int &attacker, bool &motherInfect, 
 {
 	if (motherInfect)
 		g_bZombieSpawned = true;
+
+	return Plugin_Continue;
+}
+
+public Action ZR_OnClientRespawn(int &client, ZR_RespawnCondition& condition)
+{
+	if(g_bBlockRespawn)
+	{
+		CPrintToChat(client, "Warmup: Warmup is ending. You will respawn shortly.");
+		return Plugin_Handled;
+	}
 
 	return Plugin_Continue;
 }
