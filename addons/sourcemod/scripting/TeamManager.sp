@@ -326,6 +326,7 @@ public void OnRoundStart(Event event, const char[] name, bool dontBroadcast)
 public void OnRoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
 	g_bRoundEnded = true;
+	g_bBlockRespawn = false;
 	g_bZombieSpawned = false;
 }
 
