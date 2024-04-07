@@ -15,7 +15,7 @@
 
 Handle g_hWarmupEndFwd = INVALID_HANDLE;
 
-ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvForceTeam, g_cvPlayersRatio, g_cvSlayOnWarmupEnd;
+ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvForceTeam, g_cvPlayersRatio, g_cvSlayOnWarmupEnd, g_cvAliveTeamChange;
 ConVar g_cvDynamic, g_cvDynamicRatio, g_cvDynamicTime;
 
 bool g_bWarmup = false;
@@ -33,7 +33,7 @@ public Plugin myinfo =
 	name = "TeamManager",
 	author = "BotoX + maxime1907, .Rushaway",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.2.0",
+	version = "2.2.1",
 	url = "https://github.com/srcdslab/sm-plugin-TeamManager"
 };
 
@@ -65,6 +65,7 @@ public void OnPluginStart()
 	g_cvForceTeam = CreateConVar("sm_warmupteam", "1", "Force the player to join the counterterrorist team", 0, true, 0.0, true, 1.0);
 	g_cvPlayersRatio = CreateConVar("sm_warmupratio", "0.60", "Ratio of connected players that need to be in game to start warmup timer.", 0, true, 0.0, true, 1.0);
 	g_cvSlayOnWarmupEnd = CreateConVar("sm_warmup_slay", "0", "Slay all players at the end of the warmup round.", 0, true, 0.0, true, 1.0);
+	g_cvAliveTeamChange = CreateConVar("sm_teammanager_aliveteamchange", "1", "Determines if players are allowed to change teams while they're alive. [0 = Dissalow | 1 = Allow]", 0, true, 0.0, true, 1.0);
 
 	/* Dynamic based on map size*/
 	g_cvDynamic = CreateConVar("sm_warmuptime_dynamic", "0", "Dynamic warmup timer based on map size. [0 Disabled | 1 = Enabled]", 0, true, 0.0, true, 1.0);
@@ -82,13 +83,13 @@ public void OnAllPluginsLoaded()
 
 public void OnLibraryAdded(const char[] szName)
 {
-	if (StrEqual(szName, "zombiereloaded"))
+	if (strcmp(szName, "zombiereloaded") == 0)
 		g_bZombieReloaded = true;
 }
 
 public void OnLibraryRemoved(const char[] szName)
 {
-	if (StrEqual(szName, "zombiereloaded"))
+	if (strcmp(szName, "zombiereloaded") == 0)
 		g_bZombieReloaded = false;
 }
 
@@ -229,9 +230,11 @@ public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 	if (client < 1 || client > MaxClients || !IsClientInGame(client) || !g_cvForceTeam.BoolValue)
 		return Plugin_Continue;
 
-	if(StrEqual(command, "joingame", false))
+	int CurrentTeam = GetClientTeam(client);
+
+	if(strcmp(command, "joingame", false) == 0)
 	{
-		if(GetClientTeam(client) != CS_TEAM_NONE)
+		if(CurrentTeam != CS_TEAM_NONE)
 			return Plugin_Continue;
 
 		ShowVGUIPanel(client, "team");
@@ -240,8 +243,6 @@ public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 
 	char sArg[8];
 	GetCmdArg(1, sArg, sizeof(sArg));
-
-	int CurrentTeam = GetClientTeam(client);
 	int NewTeam = StringToInt(sArg);
 
 	if(NewTeam < CS_TEAM_NONE || NewTeam > CS_TEAM_CT)
@@ -272,13 +273,17 @@ public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 		if(!g_bZombieSpawned && NewTeam == CS_TEAM_T || NewTeam == CS_TEAM_NONE)
 			NewTeam = CS_TEAM_CT;
 
-		else if(g_bZombieReloaded && g_bZombieSpawned && NewTeam == CS_TEAM_SPECTATOR)
+		else if(g_bZombieSpawned && NewTeam == CS_TEAM_SPECTATOR)
 			return Plugin_Handled;
 	}
 	else if(NewTeam == CS_TEAM_CT || NewTeam == CS_TEAM_NONE)
 		NewTeam = CS_TEAM_T;
 
 	if(NewTeam == CurrentTeam)
+		return Plugin_Handled;
+
+	// Prevent players from changing team if they are already in a team (CT or T)
+	if(!g_cvAliveTeamChange.BoolValue && IsPlayerAlive(client) && NewTeam >= 0 && (CurrentTeam == CS_TEAM_T || CurrentTeam == CS_TEAM_CT))
 		return Plugin_Handled;
 
 	ChangeClientTeam(client, NewTeam);
