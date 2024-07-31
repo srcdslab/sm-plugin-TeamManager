@@ -33,7 +33,7 @@ public Plugin myinfo =
 	name = "TeamManager",
 	author = "BotoX + maxime1907, .Rushaway",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.2.1",
+	version = "2.2.2",
 	url = "https://github.com/srcdslab/sm-plugin-TeamManager"
 };
 
@@ -51,9 +51,6 @@ public APLRes AskPluginLoad2(Handle hThis, bool bLate, char[] err, int iErrLen)
 
 public void OnPluginStart()
 {
-	if (GetEngineVersion() == Engine_CSGO)
-		AddCommandListener(OnJoinTeamCommand, "joingame");
-
 	AddCommandListener(OnJoinTeamCommand, "jointeam");
 	HookEvent("round_start", OnRoundStart, EventHookMode_Pre);
 	HookEvent("round_end", OnRoundEnd, EventHookMode_PostNoCopy);
