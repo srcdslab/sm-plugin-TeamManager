@@ -1,6 +1,7 @@
 #include <sourcemod>
 #include <cstrike>
 #include <sdktools>
+#include <TeamManager>
 #include <utilshelper>
 #include <multicolors>
 
@@ -13,6 +14,8 @@
 
 #define MIN_PLAYERS 2
 
+GlobalForward g_hForward_StatusOK;
+GlobalForward g_hForward_StatusNotOK;
 Handle g_hWarmupEndFwd = INVALID_HANDLE;
 
 ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvForceTeam, g_cvPlayersRatio, g_cvSlayOnWarmupEnd, g_cvAliveTeamChange;
@@ -33,12 +36,14 @@ public Plugin myinfo =
 	name = "TeamManager",
 	author = "BotoX + maxime1907, .Rushaway",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.2.2",
+	version = TeamManager_VERSION,
 	url = "https://github.com/srcdslab/sm-plugin-TeamManager"
 };
 
 public APLRes AskPluginLoad2(Handle hThis, bool bLate, char[] err, int iErrLen)
 {
+	g_hForward_StatusOK = CreateGlobalForward("TeamManager_OnPluginOK", ET_Ignore);
+	g_hForward_StatusNotOK = CreateGlobalForward("TeamManager_OnPluginNotOK", ET_Ignore);
 	g_hWarmupEndFwd = CreateGlobalForward("TeamManager_WarmupEnd", ET_Ignore);
 
 	CreateNative("TeamManager_HasWarmup", Native_HasWarmup);
@@ -75,7 +80,22 @@ public void OnPluginStart()
 
 public void OnAllPluginsLoaded()
 {
+	SendForward_Available();
+
 	g_bZombieReloaded = LibraryExists("zombiereloaded");
+}
+
+public void OnPluginPauseChange(bool pause)
+{
+	if (pause)
+		SendForward_NotAvailable();
+	else
+		SendForward_Available();
+}
+
+public void OnPluginEnd()
+{
+	SendForward_NotAvailable();
 }
 
 public void OnLibraryAdded(const char[] szName)
@@ -369,4 +389,16 @@ public int Native_HasWarmup(Handle hPlugin, int numParams)
 public int Native_InWarmup(Handle hPlugin, int numParams)
 {
 	return g_bWarmup;
+}
+
+stock void SendForward_Available()
+{
+	Call_StartForward(g_hForward_StatusOK);
+	Call_Finish();
+}
+
+stock void SendForward_NotAvailable()
+{
+	Call_StartForward(g_hForward_StatusNotOK);
+	Call_Finish();
 }

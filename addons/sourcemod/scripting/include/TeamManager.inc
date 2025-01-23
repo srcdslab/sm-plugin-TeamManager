@@ -3,6 +3,27 @@
 #endif
 #define _TeamManager_include
 
+#define TeamManager_V_MAJOR   2
+#define TeamManager_V_MINOR   3
+#define TeamManager_V_PATCH   0
+
+#define TeamManager_VERSION   "2.3.0"
+
+/**
+ * Called when the plugin becomes available.
+ * 
+ * @noreturn
+ */
+forward void TeamManager_OnPluginOK();
+
+/**
+ * Called when the plugin becomes unavailable.
+ * This can happen when the plugin is paused or unloaded.
+ * 
+ * @noreturn
+ */
+forward void TeamManager_OnPluginNotOK();
+
 /**
  * Called when warmup ends
  *
