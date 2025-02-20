@@ -3,6 +3,12 @@
 #endif
 #define _TeamManager_include
 
+#define TeamManager_V_MAJOR   "2"
+#define TeamManager_V_MINOR   "3"
+#define TeamManager_V_PATCH   "0"
+
+#define TeamManager_VERSION   TeamManager_V_MAJOR..."."...TeamManager_V_MINOR..."."...TeamManager_V_PATCH
+
 /**
  * Called when warmup ends
  *

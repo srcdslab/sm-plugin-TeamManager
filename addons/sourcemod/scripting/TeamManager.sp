@@ -1,6 +1,7 @@
 #include <sourcemod>
 #include <cstrike>
 #include <sdktools>
+#include <TeamManager>
 #include <utilshelper>
 #include <multicolors>
 
@@ -33,7 +34,7 @@ public Plugin myinfo =
 	name = "TeamManager",
 	author = "BotoX + maxime1907, .Rushaway",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.2.2",
+	version = TeamManager_VERSION,
 	url = "https://github.com/srcdslab/sm-plugin-TeamManager"
 };
 
@@ -222,6 +223,19 @@ public void OnClientDisconnect(int client)
 	g_TeamChangeQueue[client] = -1;
 }
 
+/**
+ * Handles team join commands and manages team assignments
+ * 
+ * Behavior:
+ * - Blocks team changes if player is alive (configurable with sm_teammanager_aliveteamchange)
+ * - During round end: queues team changes for next round
+ * - For Zombie Reloaded:
+ *   > Blocks direct spectator joins (handled by Spectate plugin)
+ *   > Before zombie spawn: forces players to CT team
+ *   > After zombie spawn: lets ZR handle team assignments since it has cvar (zr_respawn_team_zombie && zr_respawn_team_zombie_world)
+ * 
+ * @return             Plugin_Handled to block default behavior, Plugin_Continue to allow
+ */
 public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 {
 	if (client < 1 || client > MaxClients || !IsClientInGame(client) || !g_cvForceTeam.BoolValue)
@@ -245,6 +259,9 @@ public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 	if(NewTeam < CS_TEAM_NONE || NewTeam > CS_TEAM_CT)
 		return Plugin_Handled;
 
+	if (NewTeam == CurrentTeam && CurrentTeam != CS_TEAM_NONE)
+		return Plugin_Handled;
+
 	if(g_bRoundEnded)
 	{
 		if(NewTeam == CS_TEAM_T || NewTeam == CS_TEAM_NONE)
@@ -265,25 +282,32 @@ public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 		return Plugin_Handled;
 	}
 
-	if(g_bZombieReloaded)
-	{
-		if(!g_bZombieSpawned && NewTeam == CS_TEAM_T || NewTeam == CS_TEAM_NONE)
-			NewTeam = CS_TEAM_CT;
-
-		else if(g_bZombieSpawned && NewTeam == CS_TEAM_SPECTATOR)
-			return Plugin_Handled;
-	}
-	else if(NewTeam == CS_TEAM_CT || NewTeam == CS_TEAM_NONE)
-		NewTeam = CS_TEAM_T;
-
-	if(NewTeam == CurrentTeam)
-		return Plugin_Handled;
-
 	// Prevent players from changing team if they are already in a team (CT or T)
 	if(!g_cvAliveTeamChange.BoolValue && IsPlayerAlive(client) && NewTeam >= 0 && (CurrentTeam == CS_TEAM_T || CurrentTeam == CS_TEAM_CT))
 		return Plugin_Handled;
 
-	ChangeClientTeam(client, NewTeam);
+	if (g_bZombieReloaded)
+	{
+		if (NewTeam == CS_TEAM_SPECTATOR)
+			return Plugin_Continue;
+
+		// If zombie hasn't spawned yet, force to CT
+		if (!g_bZombieSpawned)
+		{
+			if (CurrentTeam > CS_TEAM_SPECTATOR || CurrentTeam == CS_TEAM_NONE)
+				NewTeam = CS_TEAM_CT;
+			else if (NewTeam == CS_TEAM_T || NewTeam == CS_TEAM_NONE)
+				NewTeam = CS_TEAM_CT;
+		}
+		else
+		{
+			// Let ZR handle team assignments
+			if (CurrentTeam == CS_TEAM_T || CurrentTeam == CS_TEAM_CT)
+				return Plugin_Handled;
+		}
+
+		ChangeClientTeam(client, NewTeam);
+	}
 
 	return Plugin_Handled;
 }
