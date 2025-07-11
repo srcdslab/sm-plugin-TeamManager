@@ -216,8 +216,7 @@ stock void EndWarmUp()
 				AcceptEntityInput(entites, "Kill");
 		}
 
-		if (g_cvCleanOnWarmupEnd.IntValue >= 1)
-			CreateTimer(0.3, Timer_ForceSuicide, _, TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(0.3, Timer_ForceSuicide, _, TIMER_FLAG_NO_MAPCHANGE);
 	}
 
 	CS_TerminateRound(fDelay, CSRoundEnd_GameStart, false);
