@@ -63,7 +63,7 @@ public void OnPluginStart()
 	g_cvWarmupMaxTime = CreateConVar("sm_warmuptime_max", "-1", "Maximum warmup timer [-1 = Disabled]");
 	g_cvForceTeam = CreateConVar("sm_warmupteam", "1", "Force the player to join the counterterrorist team", 0, true, 0.0, true, 1.0);
 	g_cvPlayersRatio = CreateConVar("sm_warmupratio", "0.60", "Ratio of connected players that need to be in game to start warmup timer.", 0, true, 0.0, true, 1.0);
-	g_cvCleanOnWarmupEnd = CreateConVar("sm_warmup_slay", "0", "Slay all players at the end of the warmup round. [0 = Disabled | 1 = Enabled | 2 = Enabled + Clean temporary entities]", 0, true, 0.0, true, 1.0);
+	g_cvCleanOnWarmupEnd = CreateConVar("sm_warmup_slay", "0", "Slay all players at the end of the warmup round. [0 = Disabled | 1 = Enabled | 2 = Enabled + Clean temporary entities]", 0, true, 0.0, true, 2.0);
 	g_cvAliveTeamChange = CreateConVar("sm_teammanager_aliveteamchange", "1", "Determines if players are allowed to change teams while they're alive. [0 = Dissalow | 1 = Allow]", 0, true, 0.0, true, 1.0);
 
 	/* Dynamic based on map size*/
@@ -216,7 +216,7 @@ stock void EndWarmUp()
 				AcceptEntityInput(entites, "Kill");
 		}
 
-		if (g_cvCleanOnWarmupEnd.IntValue == 1)
+		if (g_cvCleanOnWarmupEnd.IntValue >= 1)
 			CreateTimer(0.3, Timer_ForceSuicide, _, TIMER_FLAG_NO_MAPCHANGE);
 	}
 
