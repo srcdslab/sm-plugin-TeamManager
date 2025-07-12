@@ -53,6 +53,8 @@ public APLRes AskPluginLoad2(Handle hThis, bool bLate, char[] err, int iErrLen)
 
 public void OnPluginStart()
 {
+	InitStringMap();
+
 	AddCommandListener(OnJoinTeamCommand, "jointeam");
 	HookEvent("round_start", OnRoundStart, EventHookMode_Pre);
 	HookEvent("round_end", OnRoundEnd, EventHookMode_PostNoCopy);
@@ -199,25 +201,28 @@ stock void EndWarmUp()
 	g_bWarmup = false;
 	float fDelay = 3.0;
 
-	if (g_cvCleanOnWarmupEnd.IntValue > 0)
+	int iCleanMode = g_cvCleanOnWarmupEnd.IntValue;
+
+	if (iCleanMode == 2)
 	{
 		bool dummy;
 		char sClassname[64];
 		int iMaxEntities = GetMaxEntities();
 
-		for (int entites = 0; entites <= iMaxEntities; entites++)
+		for (int entities = 0; entities <= iMaxEntities; entities++)
 		{
-			if (!IsValidEntity(entites))
+			if (!IsValidEntity(entities))
 				continue;
 
-			GetEntityClassname(entites, sClassname, sizeof(sClassname));
+			GetEntityClassname(entities, sClassname, sizeof(sClassname));
 
-			if (g_hEntitiesListToKill.GetValue(sClassname, dummy))
-				AcceptEntityInput(entites, "Kill");
+			if (g_hEntitiesListToKill != null && g_hEntitiesListToKill.GetValue(sClassname, dummy))
+				AcceptEntityInput(entities, "Kill");
 		}
-
-		CreateTimer(0.3, Timer_ForceSuicide, _, TIMER_FLAG_NO_MAPCHANGE);
 	}
+
+	if (iCleanMode >= 1)
+		CreateTimer(0.3, Timer_ForceSuicide, _, TIMER_FLAG_NO_MAPCHANGE);
 
 	CS_TerminateRound(fDelay, CSRoundEnd_GameStart, false);
 	SetTeamScore(CS_TEAM_CT, 0);
@@ -235,8 +240,9 @@ public Action Timer_ForceSuicide(Handle timer)
 		if (IsClientInGame(i) && IsPlayerAlive(i))
 			ForcePlayerSuicide(i);
 	}
+	g_bBlockRespawn = false;
 
-	return Plugin_Continue;
+	return Plugin_Handled;
 }
 
 public Action Timer_FireForward(Handle hThis)
