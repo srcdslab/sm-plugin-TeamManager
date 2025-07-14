@@ -160,6 +160,14 @@ public void OnMapStart()
 	InitWarmup();
 }
 
+public void OnMapEnd()
+{
+	if (g_hEntitiesListToKill != null)
+		delete g_hEntitiesListToKill;
+
+	g_hEntitiesListToKill = new StringMap();
+}
+
 public Action OnWarmupTimer(Handle timer)
 {
 	if (!g_bWarmup)
