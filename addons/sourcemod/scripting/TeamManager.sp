@@ -28,7 +28,7 @@ int g_iWarmup = 0;
 int g_iDynamicWarmupTime = 0;
 int g_TeamChangeQueue[MAXPLAYERS + 1] = { -1, ... };
 
-StringMap g_hEntitiesListToKill = null;
+StringMap g_hEntitiesListToKill;
 
 public Plugin myinfo =
 {
