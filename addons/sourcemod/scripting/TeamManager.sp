@@ -15,7 +15,7 @@
 
 Handle g_hWarmupEndFwd = INVALID_HANDLE;
 
-ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvForceTeam, g_cvPlayersRatio, g_cvSlayOnWarmupEnd, g_cvAliveTeamChange;
+ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvForceTeam, g_cvPlayersRatio, g_cvCleanOnWarmupEnd, g_cvAliveTeamChange;
 ConVar g_cvDynamic, g_cvDynamicRatio, g_cvDynamicTime;
 
 bool g_bWarmup = false;
@@ -28,12 +28,14 @@ int g_iWarmup = 0;
 int g_iDynamicWarmupTime = 0;
 int g_TeamChangeQueue[MAXPLAYERS + 1] = { -1, ... };
 
+StringMap g_hEntitiesListToKill;
+
 public Plugin myinfo =
 {
 	name = "TeamManager",
 	author = "BotoX + maxime1907, .Rushaway",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.2.2",
+	version = "2.3.0",
 	url = "https://github.com/srcdslab/sm-plugin-TeamManager"
 };
 
@@ -51,6 +53,8 @@ public APLRes AskPluginLoad2(Handle hThis, bool bLate, char[] err, int iErrLen)
 
 public void OnPluginStart()
 {
+	InitStringMap();
+
 	AddCommandListener(OnJoinTeamCommand, "jointeam");
 	HookEvent("round_start", OnRoundStart, EventHookMode_Pre);
 	HookEvent("round_end", OnRoundEnd, EventHookMode_PostNoCopy);
@@ -61,7 +65,7 @@ public void OnPluginStart()
 	g_cvWarmupMaxTime = CreateConVar("sm_warmuptime_max", "-1", "Maximum warmup timer [-1 = Disabled]");
 	g_cvForceTeam = CreateConVar("sm_warmupteam", "1", "Force the player to join the counterterrorist team", 0, true, 0.0, true, 1.0);
 	g_cvPlayersRatio = CreateConVar("sm_warmupratio", "0.60", "Ratio of connected players that need to be in game to start warmup timer.", 0, true, 0.0, true, 1.0);
-	g_cvSlayOnWarmupEnd = CreateConVar("sm_warmup_slay", "0", "Slay all players at the end of the warmup round.", 0, true, 0.0, true, 1.0);
+	g_cvCleanOnWarmupEnd = CreateConVar("sm_warmup_slay", "0", "Slay all players at the end of the warmup round. [0 = Disabled | 1 = Enabled | 2 = Enabled + Clean temporary entities]", 0, true, 0.0, true, 2.0);
 	g_cvAliveTeamChange = CreateConVar("sm_teammanager_aliveteamchange", "1", "Determines if players are allowed to change teams while they're alive. [0 = Dissalow | 1 = Allow]", 0, true, 0.0, true, 1.0);
 
 	/* Dynamic based on map size*/
@@ -71,6 +75,12 @@ public void OnPluginStart()
 
 	g_cvWarmup.AddChangeHook(WarmupSystem);
 	AutoExecConfig(true);
+}
+
+public void OnPluginEnd()
+{
+	if (g_hEntitiesListToKill != null)
+		delete g_hEntitiesListToKill;
 }
 
 public void OnAllPluginsLoaded()
@@ -150,6 +160,14 @@ public void OnMapStart()
 	InitWarmup();
 }
 
+public void OnMapEnd()
+{
+	if (g_hEntitiesListToKill != null)
+		delete g_hEntitiesListToKill;
+
+	g_hEntitiesListToKill = new StringMap();
+}
+
 public Action OnWarmupTimer(Handle timer)
 {
 	if (!g_bWarmup)
@@ -191,16 +209,28 @@ stock void EndWarmUp()
 	g_bWarmup = false;
 	float fDelay = 3.0;
 
-	if (g_cvSlayOnWarmupEnd.BoolValue)
-	{
-		g_bBlockRespawn = true;
+	int iCleanMode = g_cvCleanOnWarmupEnd.IntValue;
 
-		for (int i = 1; i <= MaxClients; i++)
+	if (iCleanMode == 2)
+	{
+		bool dummy;
+		char sClassname[64];
+		int iMaxEntities = GetMaxEntities();
+
+		for (int entities = 0; entities <= iMaxEntities; entities++)
 		{
-			if (IsClientInGame(i) && IsPlayerAlive(i))
-				ForcePlayerSuicide(i);
+			if (!IsValidEntity(entities))
+				continue;
+
+			GetEntityClassname(entities, sClassname, sizeof(sClassname));
+
+			if (g_hEntitiesListToKill != null && g_hEntitiesListToKill.GetValue(sClassname, dummy))
+				AcceptEntityInput(entities, "Kill");
 		}
 	}
+
+	if (iCleanMode >= 1)
+		CreateTimer(0.3, Timer_ForceSuicide, _, TIMER_FLAG_NO_MAPCHANGE);
 
 	CS_TerminateRound(fDelay, CSRoundEnd_GameStart, false);
 	SetTeamScore(CS_TEAM_CT, 0);
@@ -208,6 +238,19 @@ stock void EndWarmUp()
 	SetTeamScore(CS_TEAM_T, 0);
 	CS_SetTeamScore(CS_TEAM_T, 0);
 	CreateTimer(fDelay, Timer_FireForward, _, TIMER_FLAG_NO_MAPCHANGE);
+}
+
+public Action Timer_ForceSuicide(Handle timer)
+{
+	g_bBlockRespawn = true;
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (IsClientInGame(i) && IsPlayerAlive(i))
+			ForcePlayerSuicide(i);
+	}
+	g_bBlockRespawn = false;
+
+	return Plugin_Handled;
 }
 
 public Action Timer_FireForward(Handle hThis)
@@ -341,12 +384,10 @@ public Action CS_OnTerminateRound(float &delay, CSRoundEndReason &reason)
 }
 
 #if defined _zr_included
-public Action ZR_OnClientInfect(int &client, int &attacker, bool &motherInfect, bool &respawnOverride, bool &respawn)
+public void ZR_OnClientInfected(int client, int attacker, bool motherInfect, bool respawnOverride, bool respawn)
 {
 	if (motherInfect)
 		g_bZombieSpawned = true;
-
-	return Plugin_Continue;
 }
 
 public Action ZR_OnClientRespawn(int &client, ZR_RespawnCondition& condition)
@@ -369,4 +410,33 @@ public int Native_HasWarmup(Handle hPlugin, int numParams)
 public int Native_InWarmup(Handle hPlugin, int numParams)
 {
 	return g_bWarmup;
+}
+
+stock void InitStringMap()
+{
+	char sSafeEntitiesToKill[][] = {
+		"env_beam", "env_entity_maker", "env_explosion", "env_fade", "env_shake", "env_spark", "env_sprite",
+		"func_breakable", "func_button", "func_door", "func_door_rotating", "func_movelinear", "func_physbox", "func_physbox_multiplayer", "func_reflective_glass", "func_rotating",
+		"game_text",
+		"info_particle_system", "info_teleport_destination",
+		"phys_keepupright", "phys_thruster",
+		"point_hurt", "point_spotlight", "point_teleport",
+		"prop_dynamic", "prop_dynamic_override", "prop_physics", "prop_physics_multiplayer", "prop_physics_override",
+		"trigger_hurt", "trigger_multiple", "trigger_once", "trigger_push", "trigger_teleport",
+		"weapon_glock", "weapon_usp", "weapon_deagle", "weapon_elite", "weapon_p228", "weapon_fiveseven",
+		"weapon_m3", "weapon_xm1014",
+		"weapon_mac10", "weapon_tmp", "weapon_mp5navy", "weapon_ump45", "weapon_p90",
+		"weapon_galil", "weapon_famas", "weapon_ak47", "weapon_m4a1", "weapon_sg552", "weapon_aug",
+		"weapon_scout", "weapon_sg550", "weapon_g3sg1", "weapon_awp",
+		"weapon_m249", "weapon_knife", "weapon_c4", 
+		"weapon_hegrenade", "weapon_flashbang", "weapon_smokegrenade", "item_nvgs", "item_kevlar"
+	};
+
+	if (g_hEntitiesListToKill == null)
+		g_hEntitiesListToKill = new StringMap();
+
+	for (int i = 0; i < sizeof(sSafeEntitiesToKill); i++)
+	{
+		g_hEntitiesListToKill.SetValue(sSafeEntitiesToKill[i], true);
+	}
 }
