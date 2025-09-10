@@ -15,7 +15,7 @@ This repository contains **TeamManager**, a SourcePawn plugin for SourceMod that
 
 ### Required Tools
 - **SourceMod 1.12+**: Latest stable release required
-- **SourceKnight**: Python-based build system for SourceMod plugins
+- **SourceKnight 0.2**: Python-based build system for SourceMod plugins (exact version specified in sourceknight.yaml)
 - **Python 3.x**: Required for sourceknight build tool
 
 ### Dependencies (Managed by SourceKnight)
@@ -96,14 +96,26 @@ CreateTimer(1.0, OnWarmupTimer, 0, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
 
 ### Build Commands
 ```bash
-# Install sourceknight (if not available in CI)
-pip install sourceknight
+# Install sourceknight (exact version from sourceknight.yaml)
+pip install sourceknight==0.2
 
 # Build plugin
 sourceknight build
 
 # Output location
 addons/sourcemod/plugins/TeamManager.smx
+```
+
+### Build Configuration Validation
+```bash
+# Verify configuration is valid
+cat sourceknight.yaml
+
+# Check target plugin exists
+ls -la addons/sourcemod/scripting/TeamManager.sp
+
+# Validate dependencies are correctly specified
+grep -A 20 "dependencies:" sourceknight.yaml
 ```
 
 ### CI/CD Pipeline
