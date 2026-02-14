@@ -2,7 +2,6 @@
 #include <cstrike>
 #include <sdktools>
 #include <utilshelper>
-#include <multicolors>
 
 #undef REQUIRE_PLUGIN
 #tryinclude <zombiereloaded>
@@ -35,7 +34,7 @@ public Plugin myinfo =
 	name = "TeamManager",
 	author = "BotoX + maxime1907, .Rushaway",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.3.0",
+	version = "2.3.1",
 	url = "https://github.com/srcdslab/sm-plugin-TeamManager"
 };
 
@@ -394,7 +393,7 @@ public Action ZR_OnClientRespawn(int &client, ZR_RespawnCondition& condition)
 {
 	if(g_bBlockRespawn)
 	{
-		CPrintToChat(client, "Warmup: Warmup is ending. You will respawn shortly.");
+		PrintToChat(client, "Warmup: Warmup is ending. You will respawn shortly.");
 		return Plugin_Handled;
 	}
 
