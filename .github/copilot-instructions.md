@@ -15,16 +15,14 @@ This repository contains **TeamManager**, a SourcePawn plugin for SourceMod that
 
 ### Required Tools
 - **SourceMod 1.12+**: Latest stable release required
-- **SourceKnight 0.2**: Python-based build system for SourceMod plugins (exact version specified in sourceknight.yaml)
-- **Python 3.x**: Required for sourceknight build tool
+- **SourcePawn compiler (spcomp) 1.12.x**: Installed in CI via `rumblefrog/setup-sp`
+- **Native GitHub Actions workflow**: Build/tag/release is handled by `.github/workflows/ci.yml`, no external build tool required
 
-### Dependencies (Managed by SourceKnight)
+### Dependencies (cloned directly in CI)
 ```yaml
-# From sourceknight.yaml
-- sourcemod: 1.11.0-git6934 (build dependency)
-- zombiereloaded: GitHub integration for zombie game modes
-- utilshelper: Utility functions library
-- multicolors: Enhanced chat color support
+# From .github/workflows/ci.yml "Install dependencies" step
+- zombiereloaded: https://github.com/srcdslab/sm-plugin-zombiereloaded (include: src/addons/sourcemod/scripting/include)
+- utilshelper: https://github.com/srcdslab/sm-plugin-UtilsHelper (include: addons/sourcemod/scripting/include)
 ```
 
 ## Project Structure
@@ -35,9 +33,8 @@ addons/sourcemod/
 │   ├── TeamManager.sp           # Main plugin file (443 lines)
 │   └── include/
 │       └── TeamManager.inc      # Native functions API (44 lines)
-sourceknight.yaml                # Build configuration
 .github/
-├── workflows/ci.yml             # CI/CD pipeline
+├── workflows/ci.yml             # CI/CD pipeline (native GitHub Actions, no external build tool)
 └── dependabot.yml              # Dependency updates
 ```
 
@@ -92,15 +89,16 @@ g_cvWarmup.AddChangeHook(WarmupSystem);
 CreateTimer(1.0, OnWarmupTimer, 0, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
 ```
 
-## Build System (SourceKnight)
+## Build System (native GitHub Actions)
 
 ### Build Commands
 ```bash
-# Install sourceknight (exact version from sourceknight.yaml)
-pip install sourceknight==0.2
+# Install the SourcePawn compiler matching this repo's SourceMod version (1.12.x)
+# (in CI this is done by rumblefrog/setup-sp; locally, grab a matching spcomp build
+# from https://sm.alliedmods.net/smdrop/1.12/)
 
-# Build plugin
-sourceknight build
+# Build plugin (from addons/sourcemod/scripting, with dependency includes in ./include)
+spcomp -i include -o ../plugins/TeamManager.smx TeamManager.sp
 
 # Output location
 addons/sourcemod/plugins/TeamManager.smx
@@ -108,19 +106,16 @@ addons/sourcemod/plugins/TeamManager.smx
 
 ### Build Configuration Validation
 ```bash
-# Verify configuration is valid
-cat sourceknight.yaml
-
 # Check target plugin exists
 ls -la addons/sourcemod/scripting/TeamManager.sp
 
-# Validate dependencies are correctly specified
-grep -A 20 "dependencies:" sourceknight.yaml
+# Inspect the CI workflow for build/dependency details
+cat .github/workflows/ci.yml
 ```
 
 ### CI/CD Pipeline
-- **Trigger**: Push to main/master, PRs, tags
-- **Build**: Ubuntu 24.04 with sourceknight
+- **Trigger**: push, pull_request, workflow_dispatch
+- **Build**: Ubuntu latest, spcomp via `rumblefrog/setup-sp`, dependency includes cloned directly from their source repos
 - **Artifacts**: Packaged plugin files
 - **Release**: Automatic releases on tags and latest on main/master
 
@@ -226,8 +221,8 @@ char sSafeEntitiesToKill[][] = {
 
 ### Build Validation
 ```bash
-# Check compilation
-sourceknight build
+# Check compilation (see Build Commands above)
+spcomp -i include -o ../plugins/TeamManager.smx TeamManager.sp
 
 # Verify output
 ls -la addons/sourcemod/plugins/TeamManager.smx
@@ -239,7 +234,7 @@ stat addons/sourcemod/plugins/TeamManager.smx
 ## Troubleshooting Common Issues
 
 ### Build Failures
-- **Missing dependencies**: Check sourceknight.yaml dependency versions
+- **Missing dependencies**: Check the "Install dependencies" step in `.github/workflows/ci.yml`
 - **Syntax errors**: Ensure `#pragma semicolon 1` and `#pragma newdecls required`
 - **Include issues**: Verify all `#include` statements resolve correctly
 
@@ -270,18 +265,15 @@ stat addons/sourcemod/plugins/TeamManager.smx
 - **Current Version**: 2.3.0 (see plugin info block)
 - **Versioning**: Semantic versioning (MAJOR.MINOR.PATCH)
 - **Release Process**: Automatic via GitHub Actions on tags
-- **Compatibility**: SourceMod 1.12+ required (check sourceknight.yaml for exact versions)
+- **Compatibility**: SourceMod 1.12+ required (check `.github/workflows/ci.yml` for the exact compiler version)
 
 ---
 
 ## Quick Reference Commands
 
 ```bash
-# Build plugin
-sourceknight build
-
-# Development dependencies
-pip install sourceknight
+# Build plugin (from addons/sourcemod/scripting)
+spcomp -i include -o ../plugins/TeamManager.smx TeamManager.sp
 
 # Plugin output
 ./addons/sourcemod/plugins/TeamManager.smx
