@@ -13,6 +13,7 @@
 #define MIN_PLAYERS 2
 
 GlobalForward g_hWarmupEndFwd;
+Handle g_hWarmupTimer = INVALID_HANDLE;
 
 ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvForceTeam, g_cvPlayersRatio, g_cvCleanOnWarmupEnd, g_cvAliveTeamChange;
 ConVar g_cvDynamic, g_cvDynamicRatio, g_cvDynamicTime;
@@ -24,7 +25,7 @@ bool g_bBlockRespawn = false;
 bool g_bZombieReloaded = false;
 
 int g_iWarmup = 0;
-int g_iDynamicWarmupTime = 0;
+int g_iWarmupTime = 0;
 int g_TeamChangeQueue[MAXPLAYERS + 1] = { -1, ... };
 
 StringMap g_hEntitiesListToKill;
@@ -74,6 +75,9 @@ public void OnPluginStart()
 
 	g_cvWarmup.AddChangeHook(WarmupSystem);
 	AutoExecConfig(true);
+
+	// OnMapStart is not fired when the plugin is loaded in the middle of a map.
+	InitWarmup();
 }
 
 public void OnPluginEnd()
@@ -105,51 +109,72 @@ public void WarmupSystem(ConVar convar, const char[] oldValue, const char[] newV
 
 public void InitWarmup()
 {
+	KillWarmupTimer();
+
 	g_iWarmup = 0;
+	g_iWarmupTime = 0;
 	g_bWarmup = false;
 	g_bRoundEnded = false;
 	g_bBlockRespawn = false;
 	g_bZombieSpawned = false;
 
-	if (g_cvDynamic.IntValue > 0)
+	// Work on local copies so the operator's ConVar values are never overwritten.
+	int iWarmupTime = g_cvWarmuptime.IntValue;
+	int iMaxTime = g_cvWarmupMaxTime.IntValue;
+	bool bDynamic = g_cvDynamic.BoolValue;
+
+	// Prevent the static warmup timer from being longer than the maximum warmup time.
+	if (iMaxTime >= 0 && iWarmupTime > iMaxTime)
+		iWarmupTime = iMaxTime;
+
+	int iResolvedTime = iWarmupTime;
+
+	if (bDynamic)
 	{
-		// Convert the map size fromn bytes to megabytes.
-		int iMapSize = (GetCurrentMapSize() / 1048576);
+		// Convert the map size from bytes to mebibytes.
+		int iMapSize = GetCurrentMapSize() / 1048576;
 		if (iMapSize < 1)
-			g_cvDynamic.IntValue = 0; // Invalid map size, disable dynamic warmup.
+		{
+			// Invalid map size, fall back to the static warmup timer.
+			bDynamic = false;
+		}
 		else
 		{
-			// Ensure the dynamic ratio is between 1 and map size.
-			if (g_cvDynamicRatio.IntValue < 1)
-				g_cvDynamicRatio.IntValue = 1;
-		
-			if (g_cvDynamicRatio.IntValue > iMapSize)
-				g_cvDynamicRatio.IntValue = iMapSize;
+			// Ensure the dynamic ratio stays between 1 and the map size.
+			int iRatio = g_cvDynamicRatio.IntValue;
+			if (iRatio < 1)
+				iRatio = 1;
+			if (iRatio > iMapSize)
+				iRatio = iMapSize;
 
-			// Ratio of additional warmup time per Megabyte (MiB) based on map size.
-			int iDynamicTime = iMapSize / g_cvDynamicRatio.IntValue;
+			// Additional time per mebibyte, scaled by the configured ratio time.
+			iResolvedTime = (iMapSize / iRatio) * g_cvDynamicTime.IntValue;
 
-			// Additional time in seconds to add to the dynamic warmup timer. [Based on the dynamic ratio]
-			g_iDynamicWarmupTime = iDynamicTime * g_cvDynamicTime.IntValue;
+			// Never shorter than the static warmup timer.
+			if (iResolvedTime < iWarmupTime)
+				iResolvedTime = iWarmupTime;
+
+			// Never longer than the maximum warmup time.
+			if (iMaxTime >= 0 && iResolvedTime > iMaxTime)
+				iResolvedTime = iMaxTime;
 		}
 	}
 
-	// Prevent the warmup timer from being longer than the maximum warmup time.
-	if (g_cvWarmupMaxTime.IntValue >= 0 && g_cvWarmuptime.IntValue > g_cvWarmupMaxTime.IntValue)
-		g_cvWarmuptime.IntValue = g_cvWarmupMaxTime.IntValue;
+	g_iWarmupTime = iResolvedTime;
 
-	// Prevent the dynamic warmup timer from being shorter than the default warmup time.
-	if (g_iDynamicWarmupTime < g_cvWarmuptime.IntValue)
-		g_iDynamicWarmupTime = g_cvWarmuptime.IntValue;
-
-	// Prevent surpassing the maximum warm-up time
-	if (g_cvWarmupMaxTime.IntValue >= 0 && g_iDynamicWarmupTime > g_cvWarmupMaxTime.IntValue)
-		g_iDynamicWarmupTime = g_cvWarmupMaxTime.IntValue;
-
-	if (g_cvWarmup.BoolValue && (g_cvWarmuptime.IntValue > 0 || g_cvPlayersRatio.FloatValue > 0.0 || g_cvDynamic.IntValue > 0))
+	if (g_cvWarmup.BoolValue && (iWarmupTime > 0 || g_cvPlayersRatio.FloatValue > 0.0 || bDynamic))
 	{
 		g_bWarmup = true;
-		CreateTimer(1.0, OnWarmupTimer, 0, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+		g_hWarmupTimer = CreateTimer(1.0, OnWarmupTimer, 0, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+	}
+}
+
+stock void KillWarmupTimer()
+{
+	if (g_hWarmupTimer != INVALID_HANDLE)
+	{
+		KillTimer(g_hWarmupTimer);
+		g_hWarmupTimer = INVALID_HANDLE;
 	}
 }
 
@@ -160,6 +185,10 @@ public void OnMapStart()
 
 public void OnMapEnd()
 {
+	// The repeat timer is created with TIMER_FLAG_NO_MAPCHANGE, so it is killed
+	// automatically here. Drop our reference so we never touch a stale handle.
+	g_hWarmupTimer = INVALID_HANDLE;
+
 	delete g_hEntitiesListToKill;
 	InitStringMap();
 }
@@ -167,7 +196,10 @@ public void OnMapEnd()
 public Action OnWarmupTimer(Handle timer)
 {
 	if (!g_bWarmup)
+	{
+		g_hWarmupTimer = INVALID_HANDLE;
 		return Plugin_Stop;
+	}
 
 
 	if (g_cvPlayersRatio.FloatValue > 0.0)
@@ -185,10 +217,11 @@ public Action OnWarmupTimer(Handle timer)
 		}
 	}
 
-	int iTime = (g_cvDynamic.IntValue != 0) ? g_iDynamicWarmupTime : g_cvWarmuptime.IntValue;
+	int iTime = g_iWarmupTime;
 
 	if (g_iWarmup >= iTime)
 	{
+		g_hWarmupTimer = INVALID_HANDLE;
 		EndWarmUp();
 		return Plugin_Stop;
 	}
