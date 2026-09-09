@@ -207,26 +207,33 @@ stock void EndWarmUp()
 
 	int iCleanMode = g_cvCleanOnWarmupEnd.IntValue;
 
-	if (iCleanMode == 2)
+	if (iCleanMode == 2 && g_hEntitiesListToKill != null)
 	{
 		bool dummy;
 		char sClassname[64];
 		int iMaxEntities = GetMaxEntities();
 
-		for (int entities = 0; entities <= iMaxEntities; entities++)
+		// Skip client indices, only map entities are ever in the kill list.
+		for (int entity = MaxClients + 1; entity <= iMaxEntities; entity++)
 		{
-			if (!IsValidEntity(entities))
+			if (!IsValidEntity(entity))
 				continue;
 
-			GetEntityClassname(entities, sClassname, sizeof(sClassname));
+			if (!GetEntityClassname(entity, sClassname, sizeof(sClassname)))
+				continue;
 
-			if (g_hEntitiesListToKill != null && g_hEntitiesListToKill.GetValue(sClassname, dummy))
-				AcceptEntityInput(entities, "Kill");
+			if (g_hEntitiesListToKill.GetValue(sClassname, dummy))
+				AcceptEntityInput(entity, "Kill");
 		}
 	}
 
 	if (iCleanMode >= 1)
+	{
+		// Keep blocking ZombieReloaded respawns until the round actually
+		// restarts. It is cleared again in OnRoundEnd() and InitWarmup().
+		g_bBlockRespawn = true;
 		CreateTimer(0.3, Timer_ForceSuicide, _, TIMER_FLAG_NO_MAPCHANGE);
+	}
 
 	CS_TerminateRound(fDelay, CSRoundEnd_GameStart, false);
 	SetTeamScore(CS_TEAM_CT, 0);
@@ -238,19 +245,25 @@ stock void EndWarmUp()
 
 public Action Timer_ForceSuicide(Handle timer)
 {
+	// g_bBlockRespawn stays set here: ZombieReloaded may respawn players on a
+	// delay after death, so clearing it right away would let them respawn
+	// during the warmup teardown. It is reset in OnRoundEnd()/InitWarmup().
 	g_bBlockRespawn = true;
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		if (IsClientInGame(i) && IsPlayerAlive(i))
 			ForcePlayerSuicide(i);
 	}
-	g_bBlockRespawn = false;
 
 	return Plugin_Handled;
 }
 
 public Action Timer_FireForward(Handle timer)
 {
+	// Warmup teardown is over by now; make sure respawns are allowed again
+	// even if round_end never fired for some reason.
+	g_bBlockRespawn = false;
+
 	Call_StartForward(g_hWarmupEndFwd);
 	Call_Finish();
 	return Plugin_Handled;
