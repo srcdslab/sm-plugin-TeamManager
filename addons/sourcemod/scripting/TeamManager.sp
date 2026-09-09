@@ -306,7 +306,9 @@ public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 
 	if(g_bZombieReloaded)
 	{
-		if(!g_bZombieSpawned && NewTeam == CS_TEAM_T || NewTeam == CS_TEAM_NONE)
+		// Auto-assign (NONE) always goes to CT; joining T before the mother
+		// zombie has spawned is redirected to CT as well.
+		if((!g_bZombieSpawned && NewTeam == CS_TEAM_T) || NewTeam == CS_TEAM_NONE)
 			NewTeam = CS_TEAM_CT;
 
 		else if(g_bZombieSpawned && NewTeam == CS_TEAM_SPECTATOR)
@@ -318,8 +320,9 @@ public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 	if(NewTeam == CurrentTeam)
 		return Plugin_Handled;
 
-	// Prevent players from changing team if they are already in a team (CT or T)
-	if(!g_cvAliveTeamChange.BoolValue && IsPlayerAlive(client) && NewTeam >= 0 && (CurrentTeam == CS_TEAM_T || CurrentTeam == CS_TEAM_CT))
+	// Prevent alive players from switching between CT and T when disallowed.
+	// NewTeam is already validated to be within [CS_TEAM_NONE, CS_TEAM_CT] above.
+	if(!g_cvAliveTeamChange.BoolValue && IsPlayerAlive(client) && (CurrentTeam == CS_TEAM_T || CurrentTeam == CS_TEAM_CT))
 		return Plugin_Handled;
 
 	ChangeClientTeam(client, NewTeam);
