@@ -197,7 +197,8 @@ public Action OnWarmupTimer(Handle timer)
 {
 	if (!g_bWarmup)
 	{
-		g_hWarmupTimer = INVALID_HANDLE;
+		if (timer == g_hWarmupTimer)
+			g_hWarmupTimer = INVALID_HANDLE;
 		return Plugin_Stop;
 	}
 
@@ -221,7 +222,8 @@ public Action OnWarmupTimer(Handle timer)
 
 	if (g_iWarmup >= iTime)
 	{
-		g_hWarmupTimer = INVALID_HANDLE;
+		if (timer == g_hWarmupTimer)
+			g_hWarmupTimer = INVALID_HANDLE;
 		EndWarmUp();
 		return Plugin_Stop;
 	}
