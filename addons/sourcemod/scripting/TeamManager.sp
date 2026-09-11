@@ -12,7 +12,7 @@
 
 #define MIN_PLAYERS 2
 
-Handle g_hWarmupEndFwd = INVALID_HANDLE;
+GlobalForward g_hWarmupEndFwd;
 
 ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvForceTeam, g_cvPlayersRatio, g_cvCleanOnWarmupEnd, g_cvAliveTeamChange;
 ConVar g_cvDynamic, g_cvDynamicRatio, g_cvDynamicTime;
@@ -34,13 +34,13 @@ public Plugin myinfo =
 	name = "TeamManager",
 	author = "BotoX + maxime1907, .Rushaway",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.3.1",
+	version = "2.3.2",
 	url = "https://github.com/srcdslab/sm-plugin-TeamManager"
 };
 
 public APLRes AskPluginLoad2(Handle hThis, bool bLate, char[] err, int iErrLen)
 {
-	g_hWarmupEndFwd = CreateGlobalForward("TeamManager_WarmupEnd", ET_Ignore);
+	g_hWarmupEndFwd = new GlobalForward("TeamManager_WarmupEnd", ET_Ignore);
 
 	CreateNative("TeamManager_HasWarmup", Native_HasWarmup);
 	CreateNative("TeamManager_InWarmup", Native_InWarmup);
@@ -78,8 +78,7 @@ public void OnPluginStart()
 
 public void OnPluginEnd()
 {
-	if (g_hEntitiesListToKill != null)
-		delete g_hEntitiesListToKill;
+	delete g_hEntitiesListToKill;
 }
 
 public void OnAllPluginsLoaded()
@@ -161,10 +160,8 @@ public void OnMapStart()
 
 public void OnMapEnd()
 {
-	if (g_hEntitiesListToKill != null)
-		delete g_hEntitiesListToKill;
-
-	g_hEntitiesListToKill = new StringMap();
+	delete g_hEntitiesListToKill;
+	InitStringMap();
 }
 
 public Action OnWarmupTimer(Handle timer)
@@ -252,7 +249,7 @@ public Action Timer_ForceSuicide(Handle timer)
 	return Plugin_Handled;
 }
 
-public Action Timer_FireForward(Handle hThis)
+public Action Timer_FireForward(Handle timer)
 {
 	Call_StartForward(g_hWarmupEndFwd);
 	Call_Finish();

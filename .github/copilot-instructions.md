@@ -262,7 +262,7 @@ stat addons/sourcemod/plugins/TeamManager.smx
 
 ## Version Management
 
-- **Current Version**: 2.3.0 (see plugin info block)
+- **Current Version**: 2.3.2 (see plugin info block)
 - **Versioning**: Semantic versioning (MAJOR.MINOR.PATCH)
 - **Release Process**: Automatic via GitHub Actions on tags
 - **Compatibility**: SourceMod 1.12+ required (check `.github/workflows/ci.yml` for the exact compiler version)
