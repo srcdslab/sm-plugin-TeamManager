@@ -172,8 +172,8 @@ public Action OnWarmupTimer(Handle timer)
 
 	if (g_cvPlayersRatio.FloatValue > 0.0)
 	{
-		int ClientsConnected = GetClientCount(false);
-		int ClientsInGame = GetClientCount(true);
+		int ClientsConnected = GetWarmupPlayerCount(false);
+		int ClientsInGame = GetWarmupPlayerCount(true);
 		int ClientsNeeded = RoundToCeil(float(ClientsConnected) * g_cvPlayersRatio.FloatValue);
 		ClientsNeeded = ClientsNeeded > MIN_PLAYERS ? ClientsNeeded : MIN_PLAYERS;
 
@@ -197,6 +197,28 @@ public Action OnWarmupTimer(Handle timer)
 	g_iWarmup++;
 
 	return Plugin_Continue;
+}
+
+stock int GetWarmupPlayerCount(bool InGameOnly)
+{
+	int Clients = 0;
+
+	for (int client = 1; client <= MaxClients; client++)
+	{
+		if (!IsClientConnected(client) || IsClientSourceTV(client))
+		{
+			continue;
+		}
+
+		if (InGameOnly && !IsClientInGame(client))
+		{
+			continue;
+		}
+
+		Clients++;
+	}
+
+	return Clients;
 }
 
 stock void EndWarmUp()
