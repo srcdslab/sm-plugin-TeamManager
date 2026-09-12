@@ -14,7 +14,7 @@
 
 GlobalForward g_hWarmupEndFwd;
 
-ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvForceTeam, g_cvPlayersRatio, g_cvCleanOnWarmupEnd, g_cvAliveTeamChange;
+ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvWarmupCenterText, g_cvForceTeam, g_cvPlayersRatio, g_cvCleanOnWarmupEnd, g_cvAliveTeamChange;
 ConVar g_cvDynamic, g_cvDynamicRatio, g_cvDynamicTime;
 
 bool g_bWarmup = false;
@@ -62,6 +62,7 @@ public void OnPluginStart()
 	g_cvWarmup = CreateConVar("sm_warmup", "1", "Enables the warmup system", 0, true, 0.0, true, 1.0);
 	g_cvWarmuptime = CreateConVar("sm_warmuptime", "10", "Warmup timer.", 0, true, 0.0);
 	g_cvWarmupMaxTime = CreateConVar("sm_warmuptime_max", "-1", "Maximum warmup timer [-1 = Disabled]");
+	g_cvWarmupCenterText = CreateConVar("sm_warmup_centertext", "1", "Display warmup status messages in center text", 0, true, 0.0, true, 1.0);
 	g_cvForceTeam = CreateConVar("sm_warmupteam", "1", "Force the player to join the counterterrorist team", 0, true, 0.0, true, 1.0);
 	g_cvPlayersRatio = CreateConVar("sm_warmupratio", "0.60", "Ratio of connected players that need to be in game to start warmup timer.", 0, true, 0.0, true, 1.0);
 	g_cvCleanOnWarmupEnd = CreateConVar("sm_warmup_slay", "0", "Slay all players at the end of the warmup round. [0 = Disabled | 1 = Enabled | 2 = Enabled + Clean temporary entities]", 0, true, 0.0, true, 2.0);
@@ -180,7 +181,10 @@ public Action OnWarmupTimer(Handle timer)
 		if(ClientsInGame < ClientsNeeded)
 		{
 			g_iWarmup = 0;
-			PrintCenterTextAll("Warmup: Waiting for %d more players to join.", ClientsNeeded - ClientsInGame);
+			if (g_cvWarmupCenterText.BoolValue)
+			{
+				PrintCenterTextAll("Warmup: Waiting for %d more players to join.", ClientsNeeded - ClientsInGame);
+			}
 			return Plugin_Continue;
 		}
 	}
@@ -193,7 +197,10 @@ public Action OnWarmupTimer(Handle timer)
 		return Plugin_Stop;
 	}
 
-	PrintCenterTextAll("Warmup: %d", iTime - g_iWarmup);
+	if (g_cvWarmupCenterText.BoolValue)
+	{
+		PrintCenterTextAll("Warmup: %d", iTime - g_iWarmup);
+	}
 	g_iWarmup++;
 
 	return Plugin_Continue;
