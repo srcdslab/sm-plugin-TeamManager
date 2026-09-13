@@ -14,7 +14,7 @@
 
 GlobalForward g_hWarmupEndFwd;
 
-ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvForceTeam, g_cvPlayersRatio, g_cvCleanOnWarmupEnd, g_cvAliveTeamChange;
+ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvForceTeam, g_cvPlayersRatio, g_cvExcludeSpectators, g_cvCleanOnWarmupEnd, g_cvAliveTeamChange;
 ConVar g_cvDynamic, g_cvDynamicRatio, g_cvDynamicTime;
 
 bool g_bWarmup = false;
@@ -64,6 +64,7 @@ public void OnPluginStart()
 	g_cvWarmupMaxTime = CreateConVar("sm_warmuptime_max", "-1", "Maximum warmup timer [-1 = Disabled]");
 	g_cvForceTeam = CreateConVar("sm_warmupteam", "1", "Force the player to join the counterterrorist team", 0, true, 0.0, true, 1.0);
 	g_cvPlayersRatio = CreateConVar("sm_warmupratio", "0.60", "Ratio of connected players that need to be in game to start warmup timer.", 0, true, 0.0, true, 1.0);
+	g_cvExcludeSpectators = CreateConVar("sm_teammanager_warmup_exclude_spectators", "1", "Exclude spectators from warmup player counts. [0 = Disabled | 1 = Enabled]", 0, true, 0.0, true, 1.0);
 	g_cvCleanOnWarmupEnd = CreateConVar("sm_warmup_slay", "0", "Slay all players at the end of the warmup round. [0 = Disabled | 1 = Enabled | 2 = Enabled + Clean temporary entities]", 0, true, 0.0, true, 2.0);
 	g_cvAliveTeamChange = CreateConVar("sm_teammanager_aliveteamchange", "1", "Determines if players are allowed to change teams while they're alive. [0 = Dissalow | 1 = Allow]", 0, true, 0.0, true, 1.0);
 
@@ -215,10 +216,31 @@ stock int GetWarmupPlayerCount(bool InGameOnly)
 			continue;
 		}
 
+		if (IsWarmupSpectator(client))
+		{
+			continue;
+		}
+
 		Clients++;
 	}
 
 	return Clients;
+}
+
+stock bool IsWarmupSpectator(int client)
+{
+	if (!g_cvExcludeSpectators.BoolValue)
+	{
+		return false;
+	}
+
+	if (!IsClientInGame(client))
+	{
+		return false;
+	}
+
+	int Team = GetClientTeam(client);
+	return Team == CS_TEAM_SPECTATOR;
 }
 
 stock void EndWarmUp()
