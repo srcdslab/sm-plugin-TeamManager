@@ -35,7 +35,7 @@ public Plugin myinfo =
 	name = "TeamManager",
 	author = "BotoX + maxime1907, .Rushaway",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.3.4",
+	version = "2.3.5",
 	url = "https://github.com/srcdslab/sm-plugin-TeamManager"
 };
 
@@ -245,26 +245,31 @@ stock void EndWarmUp()
 
 	int iCleanMode = g_cvCleanOnWarmupEnd.IntValue;
 
-	if (iCleanMode == 2)
+	if (iCleanMode == 2 && g_hEntitiesListToKill != null)
 	{
 		bool dummy;
 		char sClassname[64];
 		int iMaxEntities = GetMaxEntities();
 
-		for (int entities = 0; entities <= iMaxEntities; entities++)
+		// Skip client indices, only map entities are ever in the kill list.
+		for (int entity = MaxClients + 1; entity <= iMaxEntities; entity++)
 		{
-			if (!IsValidEntity(entities))
+			if (!IsValidEntity(entity))
 				continue;
 
-			GetEntityClassname(entities, sClassname, sizeof(sClassname));
+			if (!GetEntityClassname(entity, sClassname, sizeof(sClassname)))
+				continue;
 
-			if (g_hEntitiesListToKill != null && g_hEntitiesListToKill.GetValue(sClassname, dummy))
-				AcceptEntityInput(entities, "Kill");
+			if (g_hEntitiesListToKill.GetValue(sClassname, dummy))
+				AcceptEntityInput(entity, "Kill");
 		}
 	}
 
 	if (iCleanMode >= 1)
+	{
+		g_bBlockRespawn = true;
 		CreateTimer(0.3, Timer_ForceSuicide, _, TIMER_FLAG_NO_MAPCHANGE);
+	}
 
 	CS_TerminateRound(fDelay, CSRoundEnd_GameStart, false);
 	SetTeamScore(CS_TEAM_CT, 0);
@@ -282,13 +287,14 @@ public Action Timer_ForceSuicide(Handle timer)
 		if (IsClientInGame(i) && IsPlayerAlive(i))
 			ForcePlayerSuicide(i);
 	}
-	g_bBlockRespawn = false;
 
 	return Plugin_Handled;
 }
 
 public Action Timer_FireForward(Handle timer)
 {
+	g_bBlockRespawn = false;
+
 	Call_StartForward(g_hWarmupEndFwd);
 	Call_Finish();
 	return Plugin_Handled;
