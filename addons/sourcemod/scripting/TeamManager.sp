@@ -34,7 +34,7 @@ public Plugin myinfo =
 	name = "TeamManager",
 	author = "BotoX + maxime1907, .Rushaway",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.3.2",
+	version = "2.3.5",
 	url = "https://github.com/srcdslab/sm-plugin-TeamManager"
 };
 
@@ -229,8 +229,6 @@ stock void EndWarmUp()
 
 	if (iCleanMode >= 1)
 	{
-		// Keep blocking ZombieReloaded respawns until the round actually
-		// restarts. It is cleared again in OnRoundEnd() and InitWarmup().
 		g_bBlockRespawn = true;
 		CreateTimer(0.3, Timer_ForceSuicide, _, TIMER_FLAG_NO_MAPCHANGE);
 	}
@@ -245,9 +243,6 @@ stock void EndWarmUp()
 
 public Action Timer_ForceSuicide(Handle timer)
 {
-	// g_bBlockRespawn stays set here: ZombieReloaded may respawn players on a
-	// delay after death, so clearing it right away would let them respawn
-	// during the warmup teardown. It is reset in OnRoundEnd()/InitWarmup().
 	g_bBlockRespawn = true;
 	for (int i = 1; i <= MaxClients; i++)
 	{
@@ -260,8 +255,6 @@ public Action Timer_ForceSuicide(Handle timer)
 
 public Action Timer_FireForward(Handle timer)
 {
-	// Warmup teardown is over by now; make sure respawns are allowed again
-	// even if round_end never fired for some reason.
 	g_bBlockRespawn = false;
 
 	Call_StartForward(g_hWarmupEndFwd);
