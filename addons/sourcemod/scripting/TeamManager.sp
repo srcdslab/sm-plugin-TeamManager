@@ -13,7 +13,7 @@
 #define MIN_PLAYERS 2
 
 GlobalForward g_hWarmupEndFwd;
-Handle g_hWarmupTimer = INVALID_HANDLE;
+Handle g_hWarmupTimer = null;
 
 ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvForceTeam, g_cvPlayersRatio, g_cvCleanOnWarmupEnd, g_cvAliveTeamChange;
 ConVar g_cvDynamic, g_cvDynamicRatio, g_cvDynamicTime;
@@ -168,10 +168,10 @@ public void InitWarmup()
 
 stock void KillWarmupTimer()
 {
-	if (g_hWarmupTimer != INVALID_HANDLE)
+	if (g_hWarmupTimer != null)
 	{
 		KillTimer(g_hWarmupTimer);
-		g_hWarmupTimer = INVALID_HANDLE;
+		g_hWarmupTimer = null;
 	}
 }
 
@@ -182,9 +182,7 @@ public void OnMapStart()
 
 public void OnMapEnd()
 {
-	// The repeat timer is created with TIMER_FLAG_NO_MAPCHANGE, so it is killed
-	// automatically here. Drop our reference so we never touch a stale handle.
-	g_hWarmupTimer = INVALID_HANDLE;
+	g_hWarmupTimer = null;
 
 	delete g_hEntitiesListToKill;
 	InitStringMap();
@@ -195,7 +193,7 @@ public Action OnWarmupTimer(Handle timer)
 	if (!g_bWarmup)
 	{
 		if (timer == g_hWarmupTimer)
-			g_hWarmupTimer = INVALID_HANDLE;
+			g_hWarmupTimer = null;
 		return Plugin_Stop;
 	}
 
@@ -220,7 +218,7 @@ public Action OnWarmupTimer(Handle timer)
 	if (g_iWarmup >= iTime)
 	{
 		if (timer == g_hWarmupTimer)
-			g_hWarmupTimer = INVALID_HANDLE;
+			g_hWarmupTimer = null;
 		EndWarmUp();
 		return Plugin_Stop;
 	}
