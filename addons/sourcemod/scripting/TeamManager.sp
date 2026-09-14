@@ -75,9 +75,6 @@ public void OnPluginStart()
 
 	g_cvWarmup.AddChangeHook(WarmupSystem);
 	AutoExecConfig(true);
-
-	// OnMapStart is not fired when the plugin is loaded in the middle of a map.
-	InitWarmup();
 }
 
 public void OnPluginEnd()
