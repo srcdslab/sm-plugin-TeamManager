@@ -13,8 +13,9 @@
 #define MIN_PLAYERS 2
 
 GlobalForward g_hWarmupEndFwd;
+Handle g_hWarmupTimer = null;
 
-ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvForceTeam, g_cvPlayersRatio, g_cvExcludeSpectators, g_cvCleanOnWarmupEnd, g_cvAliveTeamChange;
+ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvWarmupWaitingCenterText, g_cvWarmupCountdownCenterText, g_cvForceTeam, g_cvPlayersRatio, g_cvExcludeSpectators, g_cvCleanOnWarmupEnd, g_cvAliveTeamChange;
 ConVar g_cvDynamic, g_cvDynamicRatio, g_cvDynamicTime;
 
 bool g_bWarmup = false;
@@ -24,7 +25,7 @@ bool g_bBlockRespawn = false;
 bool g_bZombieReloaded = false;
 
 int g_iWarmup = 0;
-int g_iDynamicWarmupTime = 0;
+int g_iWarmupTime = 0;
 int g_TeamChangeQueue[MAXPLAYERS + 1] = { -1, ... };
 
 StringMap g_hEntitiesListToKill;
@@ -34,7 +35,7 @@ public Plugin myinfo =
 	name = "TeamManager",
 	author = "BotoX + maxime1907, .Rushaway",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.3.2",
+	version = "2.3.5",
 	url = "https://github.com/srcdslab/sm-plugin-TeamManager"
 };
 
@@ -62,6 +63,8 @@ public void OnPluginStart()
 	g_cvWarmup = CreateConVar("sm_warmup", "1", "Enables the warmup system", 0, true, 0.0, true, 1.0);
 	g_cvWarmuptime = CreateConVar("sm_warmuptime", "10", "Warmup timer.", 0, true, 0.0);
 	g_cvWarmupMaxTime = CreateConVar("sm_warmuptime_max", "-1", "Maximum warmup timer [-1 = Disabled]");
+	g_cvWarmupWaitingCenterText = CreateConVar("sm_warmup_centertext_waiting", "1", "Display the warmup waiting-for-players message in center text", 0, true, 0.0, true, 1.0);
+	g_cvWarmupCountdownCenterText = CreateConVar("sm_warmup_centertext_countdown", "1", "Display the warmup countdown message in center text", 0, true, 0.0, true, 1.0);
 	g_cvForceTeam = CreateConVar("sm_warmupteam", "1", "Force the player to join the counterterrorist team", 0, true, 0.0, true, 1.0);
 	g_cvPlayersRatio = CreateConVar("sm_warmupratio", "0.60", "Ratio of connected players that need to be in game to start warmup timer.", 0, true, 0.0, true, 1.0);
 	g_cvExcludeSpectators = CreateConVar("sm_teammanager_warmup_exclude_spectators", "0", "Exclude spectators from warmup player counts. [0 = Disabled | 1 = Enabled]", 0, true, 0.0, true, 1.0);
@@ -106,51 +109,72 @@ public void WarmupSystem(ConVar convar, const char[] oldValue, const char[] newV
 
 public void InitWarmup()
 {
+	KillWarmupTimer();
+
 	g_iWarmup = 0;
+	g_iWarmupTime = 0;
 	g_bWarmup = false;
 	g_bRoundEnded = false;
 	g_bBlockRespawn = false;
 	g_bZombieSpawned = false;
 
-	if (g_cvDynamic.IntValue > 0)
+	// Work on local copies so the operator's ConVar values are never overwritten.
+	int iWarmupTime = g_cvWarmuptime.IntValue;
+	int iMaxTime = g_cvWarmupMaxTime.IntValue;
+	bool bDynamic = g_cvDynamic.BoolValue;
+
+	// Prevent the static warmup timer from being longer than the maximum warmup time.
+	if (iMaxTime >= 0 && iWarmupTime > iMaxTime)
+		iWarmupTime = iMaxTime;
+
+	int iResolvedTime = iWarmupTime;
+
+	if (bDynamic)
 	{
-		// Convert the map size fromn bytes to megabytes.
-		int iMapSize = (GetCurrentMapSize() / 1048576);
+		// Convert the map size from bytes to mebibytes.
+		int iMapSize = GetCurrentMapSize() / 1048576;
 		if (iMapSize < 1)
-			g_cvDynamic.IntValue = 0; // Invalid map size, disable dynamic warmup.
+		{
+			// Invalid map size, fall back to the static warmup timer.
+			bDynamic = false;
+		}
 		else
 		{
-			// Ensure the dynamic ratio is between 1 and map size.
-			if (g_cvDynamicRatio.IntValue < 1)
-				g_cvDynamicRatio.IntValue = 1;
-		
-			if (g_cvDynamicRatio.IntValue > iMapSize)
-				g_cvDynamicRatio.IntValue = iMapSize;
+			// Ensure the dynamic ratio stays between 1 and the map size.
+			int iRatio = g_cvDynamicRatio.IntValue;
+			if (iRatio < 1)
+				iRatio = 1;
+			if (iRatio > iMapSize)
+				iRatio = iMapSize;
 
-			// Ratio of additional warmup time per Megabyte (MiB) based on map size.
-			int iDynamicTime = iMapSize / g_cvDynamicRatio.IntValue;
+			// Additional time per mebibyte, scaled by the configured ratio time.
+			iResolvedTime = (iMapSize / iRatio) * g_cvDynamicTime.IntValue;
 
-			// Additional time in seconds to add to the dynamic warmup timer. [Based on the dynamic ratio]
-			g_iDynamicWarmupTime = iDynamicTime * g_cvDynamicTime.IntValue;
+			// Never shorter than the static warmup timer.
+			if (iResolvedTime < iWarmupTime)
+				iResolvedTime = iWarmupTime;
+
+			// Never longer than the maximum warmup time.
+			if (iMaxTime >= 0 && iResolvedTime > iMaxTime)
+				iResolvedTime = iMaxTime;
 		}
 	}
 
-	// Prevent the warmup timer from being longer than the maximum warmup time.
-	if (g_cvWarmupMaxTime.IntValue >= 0 && g_cvWarmuptime.IntValue > g_cvWarmupMaxTime.IntValue)
-		g_cvWarmuptime.IntValue = g_cvWarmupMaxTime.IntValue;
+	g_iWarmupTime = iResolvedTime;
 
-	// Prevent the dynamic warmup timer from being shorter than the default warmup time.
-	if (g_iDynamicWarmupTime < g_cvWarmuptime.IntValue)
-		g_iDynamicWarmupTime = g_cvWarmuptime.IntValue;
-
-	// Prevent surpassing the maximum warm-up time
-	if (g_cvWarmupMaxTime.IntValue >= 0 && g_iDynamicWarmupTime > g_cvWarmupMaxTime.IntValue)
-		g_iDynamicWarmupTime = g_cvWarmupMaxTime.IntValue;
-
-	if (g_cvWarmup.BoolValue && (g_cvWarmuptime.IntValue > 0 || g_cvPlayersRatio.FloatValue > 0.0 || g_cvDynamic.IntValue > 0))
+	if (g_cvWarmup.BoolValue && (iWarmupTime > 0 || g_cvPlayersRatio.FloatValue > 0.0 || bDynamic))
 	{
 		g_bWarmup = true;
-		CreateTimer(1.0, OnWarmupTimer, 0, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+		g_hWarmupTimer = CreateTimer(1.0, OnWarmupTimer, 0, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+	}
+}
+
+stock void KillWarmupTimer()
+{
+	if (g_hWarmupTimer != null)
+	{
+		KillTimer(g_hWarmupTimer);
+		g_hWarmupTimer = null;
 	}
 }
 
@@ -161,6 +185,8 @@ public void OnMapStart()
 
 public void OnMapEnd()
 {
+	g_hWarmupTimer = null;
+
 	delete g_hEntitiesListToKill;
 	InitStringMap();
 }
@@ -168,7 +194,11 @@ public void OnMapEnd()
 public Action OnWarmupTimer(Handle timer)
 {
 	if (!g_bWarmup)
+	{
+		if (timer == g_hWarmupTimer)
+			g_hWarmupTimer = null;
 		return Plugin_Stop;
+	}
 
 
 	if (g_cvPlayersRatio.FloatValue > 0.0)
@@ -181,20 +211,28 @@ public Action OnWarmupTimer(Handle timer)
 		if(ClientsInGame < ClientsNeeded)
 		{
 			g_iWarmup = 0;
-			PrintCenterTextAll("Warmup: Waiting for %d more players to join.", ClientsNeeded - ClientsInGame);
+			if (g_cvWarmupWaitingCenterText.BoolValue)
+			{
+				PrintCenterTextAll("Warmup: Waiting for %d more players to join.", ClientsNeeded - ClientsInGame);
+			}
 			return Plugin_Continue;
 		}
 	}
 
-	int iTime = (g_cvDynamic.IntValue != 0) ? g_iDynamicWarmupTime : g_cvWarmuptime.IntValue;
+	int iTime = g_iWarmupTime;
 
 	if (g_iWarmup >= iTime)
 	{
+		if (timer == g_hWarmupTimer)
+			g_hWarmupTimer = null;
 		EndWarmUp();
 		return Plugin_Stop;
 	}
 
-	PrintCenterTextAll("Warmup: %d", iTime - g_iWarmup);
+	if (g_cvWarmupCountdownCenterText.BoolValue)
+	{
+		PrintCenterTextAll("Warmup: %d", iTime - g_iWarmup);
+	}
 	g_iWarmup++;
 
 	return Plugin_Continue;
@@ -245,26 +283,31 @@ stock void EndWarmUp()
 
 	int iCleanMode = g_cvCleanOnWarmupEnd.IntValue;
 
-	if (iCleanMode == 2)
+	if (iCleanMode == 2 && g_hEntitiesListToKill != null)
 	{
 		bool dummy;
 		char sClassname[64];
 		int iMaxEntities = GetMaxEntities();
 
-		for (int entities = 0; entities <= iMaxEntities; entities++)
+		// Skip client indices, only map entities are ever in the kill list.
+		for (int entity = MaxClients + 1; entity <= iMaxEntities; entity++)
 		{
-			if (!IsValidEntity(entities))
+			if (!IsValidEntity(entity))
 				continue;
 
-			GetEntityClassname(entities, sClassname, sizeof(sClassname));
+			if (!GetEntityClassname(entity, sClassname, sizeof(sClassname)))
+				continue;
 
-			if (g_hEntitiesListToKill != null && g_hEntitiesListToKill.GetValue(sClassname, dummy))
-				AcceptEntityInput(entities, "Kill");
+			if (g_hEntitiesListToKill.GetValue(sClassname, dummy))
+				AcceptEntityInput(entity, "Kill");
 		}
 	}
 
 	if (iCleanMode >= 1)
+	{
+		g_bBlockRespawn = true;
 		CreateTimer(0.3, Timer_ForceSuicide, _, TIMER_FLAG_NO_MAPCHANGE);
+	}
 
 	CS_TerminateRound(fDelay, CSRoundEnd_GameStart, false);
 	SetTeamScore(CS_TEAM_CT, 0);
@@ -282,13 +325,14 @@ public Action Timer_ForceSuicide(Handle timer)
 		if (IsClientInGame(i) && IsPlayerAlive(i))
 			ForcePlayerSuicide(i);
 	}
-	g_bBlockRespawn = false;
 
 	return Plugin_Handled;
 }
 
 public Action Timer_FireForward(Handle timer)
 {
+	g_bBlockRespawn = false;
+
 	Call_StartForward(g_hWarmupEndFwd);
 	Call_Finish();
 	return Plugin_Handled;
