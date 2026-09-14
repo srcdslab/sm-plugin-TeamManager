@@ -15,7 +15,7 @@
 GlobalForward g_hWarmupEndFwd;
 Handle g_hWarmupTimer = null;
 
-ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvWarmupWaitingCenterText, g_cvWarmupCountdownCenterText, g_cvForceTeam, g_cvPlayersRatio, g_cvCleanOnWarmupEnd, g_cvAliveTeamChange;
+ConVar g_cvWarmup, g_cvWarmuptime, g_cvWarmupMaxTime, g_cvWarmupWaitingCenterText, g_cvWarmupCountdownCenterText, g_cvForceTeam, g_cvPlayersRatio, g_cvExcludeSpectators, g_cvCleanOnWarmupEnd, g_cvAliveTeamChange;
 ConVar g_cvDynamic, g_cvDynamicRatio, g_cvDynamicTime;
 
 bool g_bWarmup = false;
@@ -67,6 +67,7 @@ public void OnPluginStart()
 	g_cvWarmupCountdownCenterText = CreateConVar("sm_warmup_centertext_countdown", "1", "Display the warmup countdown message in center text", 0, true, 0.0, true, 1.0);
 	g_cvForceTeam = CreateConVar("sm_warmupteam", "1", "Force the player to join the counterterrorist team", 0, true, 0.0, true, 1.0);
 	g_cvPlayersRatio = CreateConVar("sm_warmupratio", "0.60", "Ratio of connected players that need to be in game to start warmup timer.", 0, true, 0.0, true, 1.0);
+	g_cvExcludeSpectators = CreateConVar("sm_teammanager_warmup_exclude_spectators", "0", "Exclude spectators from warmup player counts. [0 = Disabled | 1 = Enabled]", 0, true, 0.0, true, 1.0);
 	g_cvCleanOnWarmupEnd = CreateConVar("sm_warmup_slay", "0", "Slay all players at the end of the warmup round. [0 = Disabled | 1 = Enabled | 2 = Enabled + Clean temporary entities]", 0, true, 0.0, true, 2.0);
 	g_cvAliveTeamChange = CreateConVar("sm_teammanager_aliveteamchange", "1", "Determines if players are allowed to change teams while they're alive. [0 = Dissalow | 1 = Allow]", 0, true, 0.0, true, 1.0);
 
@@ -202,8 +203,8 @@ public Action OnWarmupTimer(Handle timer)
 
 	if (g_cvPlayersRatio.FloatValue > 0.0)
 	{
-		int ClientsConnected = GetClientCount(false);
-		int ClientsInGame = GetClientCount(true);
+		int ClientsConnected, ClientsInGame;
+		GetWarmupPlayerCounts(ClientsConnected, ClientsInGame);
 		int ClientsNeeded = RoundToCeil(float(ClientsConnected) * g_cvPlayersRatio.FloatValue);
 		ClientsNeeded = ClientsNeeded > MIN_PLAYERS ? ClientsNeeded : MIN_PLAYERS;
 
@@ -235,6 +236,43 @@ public Action OnWarmupTimer(Handle timer)
 	g_iWarmup++;
 
 	return Plugin_Continue;
+}
+
+stock void GetWarmupPlayerCounts(int &ClientsConnected, int &ClientsInGame)
+{
+	ClientsConnected = 0;
+	ClientsInGame = 0;
+
+	for (int client = 1; client <= MaxClients; client++)
+	{
+		if (!IsClientConnected(client) || IsClientSourceTV(client) || IsWarmupSpectator(client))
+		{
+			continue;
+		}
+
+		ClientsConnected++;
+
+		if (IsClientInGame(client))
+		{
+			ClientsInGame++;
+		}
+	}
+}
+
+stock bool IsWarmupSpectator(int client)
+{
+	if (!g_cvExcludeSpectators.BoolValue)
+	{
+		return false;
+	}
+
+	if (!IsClientInGame(client))
+	{
+		return false;
+	}
+
+	int Team = GetClientTeam(client);
+	return Team == CS_TEAM_SPECTATOR;
 }
 
 stock void EndWarmUp()
