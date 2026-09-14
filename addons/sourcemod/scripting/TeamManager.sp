@@ -34,7 +34,7 @@ public Plugin myinfo =
 	name = "TeamManager",
 	author = "BotoX + maxime1907, .Rushaway",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.3.2",
+	version = "2.3.3",
 	url = "https://github.com/srcdslab/sm-plugin-TeamManager"
 };
 
