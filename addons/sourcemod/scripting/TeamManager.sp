@@ -243,36 +243,29 @@ stock void GetWarmupPlayerCounts(int &ClientsConnected, int &ClientsInGame)
 	ClientsConnected = 0;
 	ClientsInGame = 0;
 
+	bool excludeSpectators = g_cvExcludeSpectators.BoolValue;
+
 	for (int client = 1; client <= MaxClients; client++)
 	{
-		if (!IsClientConnected(client) || IsClientSourceTV(client) || IsWarmupSpectator(client))
+		if (!IsClientConnected(client) || IsClientSourceTV(client))
+		{
+			continue;
+		}
+
+		bool inGame = IsClientInGame(client);
+
+		if (excludeSpectators && inGame && GetClientTeam(client) == CS_TEAM_SPECTATOR)
 		{
 			continue;
 		}
 
 		ClientsConnected++;
 
-		if (IsClientInGame(client))
+		if (inGame)
 		{
 			ClientsInGame++;
 		}
 	}
-}
-
-stock bool IsWarmupSpectator(int client)
-{
-	if (!g_cvExcludeSpectators.BoolValue)
-	{
-		return false;
-	}
-
-	if (!IsClientInGame(client))
-	{
-		return false;
-	}
-
-	int Team = GetClientTeam(client);
-	return Team == CS_TEAM_SPECTATOR;
 }
 
 stock void EndWarmUp()
