@@ -35,7 +35,7 @@ public Plugin myinfo =
 	name = "TeamManager",
 	author = "BotoX + maxime1907, .Rushaway",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.3.7",
+	version = "2.3.8",
 	url = "https://github.com/srcdslab/sm-plugin-TeamManager"
 };
 
@@ -173,8 +173,7 @@ stock void KillWarmupTimer()
 {
 	if (g_hWarmupTimer != null)
 	{
-		KillTimer(g_hWarmupTimer);
-		g_hWarmupTimer = null;
+		delete g_hWarmupTimer;
 	}
 }
 
