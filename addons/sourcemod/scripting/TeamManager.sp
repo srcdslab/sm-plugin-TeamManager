@@ -35,7 +35,7 @@ public Plugin myinfo =
 	name = "TeamManager",
 	author = "BotoX + maxime1907, .Rushaway",
 	description = "Adds a warmup round, makes every human a ct and every zombie a t",
-	version = "2.3.8",
+	version = "2.3.9",
 	url = "https://github.com/srcdslab/sm-plugin-TeamManager"
 };
 
@@ -53,6 +53,8 @@ public APLRes AskPluginLoad2(Handle hThis, bool bLate, char[] err, int iErrLen)
 
 public void OnPluginStart()
 {
+	LoadTranslations("TeamManager.phrases");
+
 	InitStringMap();
 
 	AddCommandListener(OnJoinTeamCommand, "jointeam");
@@ -212,7 +214,7 @@ public Action OnWarmupTimer(Handle timer)
 			g_iWarmup = 0;
 			if (g_cvWarmupWaitingCenterText.BoolValue)
 			{
-				PrintCenterTextAll("Warmup: Waiting for %d more players to join.", ClientsNeeded - ClientsInGame);
+				PrintCenterTextAll("%t", (ClientsNeeded - ClientsInGame == 1) ? "Warmup Waiting Player" : "Warmup Waiting Players", ClientsNeeded - ClientsInGame);
 			}
 			return Plugin_Continue;
 		}
@@ -230,7 +232,7 @@ public Action OnWarmupTimer(Handle timer)
 
 	if (g_cvWarmupCountdownCenterText.BoolValue)
 	{
-		PrintCenterTextAll("Warmup: %d", iTime - g_iWarmup);
+		PrintCenterTextAll("%t", "Warmup Countdown", iTime - g_iWarmup);
 	}
 	g_iWarmup++;
 
@@ -368,13 +370,13 @@ public Action OnJoinTeamCommand(int client, const char[] command, int argc)
 			if(g_TeamChangeQueue[client] != -1)
 			{
 				g_TeamChangeQueue[client] = -1;
-				PrintCenterText(client, "Team change request canceled.");
+				PrintCenterText(client, "%t", "Team Change Canceled");
 			}
 			return Plugin_Handled;
 		}
 
 		g_TeamChangeQueue[client] = NewTeam;
-		PrintCenterText(client, "You will be placed in the selected team shortly.");
+		PrintCenterText(client, "%t", "Team Change Queued");
 		return Plugin_Handled;
 	}
 
@@ -467,7 +469,7 @@ public Action ZR_OnClientRespawn(int &client, ZR_RespawnCondition& condition)
 {
 	if(g_bBlockRespawn)
 	{
-		PrintToChat(client, "Warmup: Warmup is ending. You will respawn shortly.");
+		PrintToChat(client, "%t", "Warmup Ending Respawn");
 		return Plugin_Handled;
 	}
 

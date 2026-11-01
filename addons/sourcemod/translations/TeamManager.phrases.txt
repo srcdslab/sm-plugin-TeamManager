@@ -1,0 +1,66 @@
+"Phrases"
+{
+	"Warmup Waiting Player"
+	{
+		"#format"	"{1:d}"
+		"en"		"Warmup: Waiting for {1} more player to join."
+		"fr"		"Échauffement : en attente de {1} joueur supplémentaire."
+		"ru"		"Разминка: ожидание ещё {1} игрока."
+		"es"		"Calentamiento: esperando a que se una {1} jugador más."
+		"de"		"Aufwärmphase: Warte auf {1} weiteren Spieler."
+		"pt"		"Aquecimento: aguardando mais {1} jogador entrar."
+		"chi"		"热身：等待另外 {1} 名玩家加入。"
+	}
+	"Warmup Waiting Players"
+	{
+		"#format"	"{1:d}"
+		"en"		"Warmup: Waiting for {1} more players to join."
+		"fr"		"Échauffement : en attente de {1} joueurs supplémentaires."
+		"ru"		"Разминка: ожидание игроков, осталось: {1}."
+		"es"		"Calentamiento: esperando a que se unan {1} jugadores más."
+		"de"		"Aufwärmphase: Warte auf {1} weitere Spieler."
+		"pt"		"Aquecimento: aguardando mais {1} jogadores entrarem."
+		"chi"		"热身：等待另外 {1} 名玩家加入。"
+	}
+	"Warmup Countdown"
+	{
+		"#format"	"{1:d}"
+		"en"		"Warmup: {1}"
+		"fr"		"Échauffement : {1}"
+		"ru"		"Разминка: {1}"
+		"es"		"Calentamiento: {1}"
+		"de"		"Aufwärmphase: {1}"
+		"pt"		"Aquecimento: {1}"
+		"chi"		"热身：{1}"
+	}
+	"Team Change Canceled"
+	{
+		"en"		"Team change request canceled."
+		"fr"		"Demande de changement d'équipe annulée."
+		"ru"		"Запрос на смену команды отменён."
+		"es"		"Solicitud de cambio de equipo cancelada."
+		"de"		"Teamwechsel-Anfrage abgebrochen."
+		"pt"		"Pedido de troca de time cancelado."
+		"chi"		"已取消换队请求。"
+	}
+	"Team Change Queued"
+	{
+		"en"		"You will be placed in the selected team shortly."
+		"fr"		"Vous serez placé dans l'équipe choisie sous peu."
+		"ru"		"Скоро вы будете перемещены в выбранную команду."
+		"es"		"Pronto serás colocado en el equipo seleccionado."
+		"de"		"Du wirst in Kürze in das gewählte Team verschoben."
+		"pt"		"Você será colocado no time selecionado em breve."
+		"chi"		"你很快会被分配到所选队伍。"
+	}
+	"Warmup Ending Respawn"
+	{
+		"en"		"Warmup: Warmup is ending. You will respawn shortly."
+		"fr"		"Échauffement : l'échauffement se termine. Vous allez bientôt réapparaître."
+		"ru"		"Разминка: разминка заканчивается. Скоро вы возродитесь."
+		"es"		"Calentamiento: el calentamiento está terminando. Reaparecerás en breve."
+		"de"		"Aufwärmphase: Die Aufwärmphase endet. Du wirst gleich wiederbelebt."
+		"pt"		"Aquecimento: o aquecimento está terminando. Você vai renascer em breve."
+		"chi"		"热身：热身即将结束，你很快就会重生。"
+	}
+}
