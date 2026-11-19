@@ -10,6 +10,12 @@
 		"de"		"Aufwärmphase: Warte auf {1} weiteren Spieler."
 		"pt"		"Aquecimento: aguardando mais {1} jogador entrar."
 		"chi"		"热身：等待另外 {1} 名玩家加入。"
+		"pl"		"Rozgrzewka: czekanie na jeszcze {1} gracza."
+		"tr"		"Isınma: katılması için {1} oyuncu daha bekleniyor."
+		"it"		"Riscaldamento: in attesa di altri {1} giocatore."
+		"ua"		"Розминка: очікування ще {1} гравця."
+		"zho"		"熱身：等待另外 {1} 名玩家加入。"
+		"cze"		"Zahřívací kolo: čekání na dalšího hráče ({1})."
 	}
 	"Warmup Waiting Players"
 	{
@@ -21,6 +27,12 @@
 		"de"		"Aufwärmphase: Warte auf {1} weitere Spieler."
 		"pt"		"Aquecimento: aguardando mais {1} jogadores entrarem."
 		"chi"		"热身：等待另外 {1} 名玩家加入。"
+		"pl"		"Rozgrzewka: czekanie na jeszcze {1} graczy."
+		"tr"		"Isınma: katılması için {1} oyuncu daha bekleniyor."
+		"it"		"Riscaldamento: in attesa di altri {1} giocatori."
+		"ua"		"Розминка: очікування ще гравців: {1}."
+		"zho"		"熱身：等待另外 {1} 名玩家加入。"
+		"cze"		"Zahřívací kolo: čekání na další hráče ({1})."
 	}
 	"Warmup Countdown"
 	{
@@ -32,6 +44,12 @@
 		"de"		"Aufwärmphase: {1}"
 		"pt"		"Aquecimento: {1}"
 		"chi"		"热身：{1}"
+		"pl"		"Rozgrzewka: {1}"
+		"tr"		"Isınma: {1}"
+		"it"		"Riscaldamento: {1}"
+		"ua"		"Розминка: {1}"
+		"zho"		"熱身：{1}"
+		"cze"		"Zahřívací kolo: {1}"
 	}
 	"Team Change Canceled"
 	{
@@ -42,6 +60,12 @@
 		"de"		"Teamwechsel-Anfrage abgebrochen."
 		"pt"		"Pedido de troca de time cancelado."
 		"chi"		"已取消换队请求。"
+		"pl"		"Prośba o zmianę drużyny została anulowana."
+		"tr"		"Takım değiştirme isteği iptal edildi."
+		"it"		"Richiesta di cambio squadra annullata."
+		"ua"		"Запит на зміну команди скасовано."
+		"zho"		"已取消換隊請求。"
+		"cze"		"Žádost o změnu týmu byla zrušena."
 	}
 	"Team Change Queued"
 	{
@@ -52,6 +76,12 @@
 		"de"		"Du wirst in Kürze in das gewählte Team verschoben."
 		"pt"		"Você será colocado no time selecionado em breve."
 		"chi"		"你很快会被分配到所选队伍。"
+		"pl"		"Wkrótce zostaniesz przeniesiony do wybranej drużyny."
+		"tr"		"Kısa süre içinde seçtiğin takıma yerleştirileceksin."
+		"it"		"Verrai inserito a breve nella squadra selezionata."
+		"ua"		"Незабаром вас буде переміщено до обраної команди."
+		"zho"		"你很快會被分配到所選隊伍。"
+		"cze"		"Brzy budeš přesunut do vybraného týmu."
 	}
 	"Warmup Ending Respawn"
 	{
@@ -62,5 +92,11 @@
 		"de"		"Aufwärmphase: Die Aufwärmphase endet. Du wirst gleich wiederbelebt."
 		"pt"		"Aquecimento: o aquecimento está terminando. Você vai renascer em breve."
 		"chi"		"热身：热身即将结束，你很快就会重生。"
+		"pl"		"Rozgrzewka: rozgrzewka dobiega końca. Wkrótce się odrodzisz."
+		"tr"		"Isınma: Isınma sona eriyor. Birazdan yeniden doğacaksın."
+		"it"		"Riscaldamento: il riscaldamento sta per finire. Rinascerai a breve."
+		"ua"		"Розминка: розминка закінчується. Незабаром ви відродитесь."
+		"zho"		"熱身：熱身即將結束，你很快就會重生。"
+		"cze"		"Zahřívací kolo: zahřívací kolo končí. Brzy se znovu objevíš."
 	}
 }
